@@ -2,13 +2,44 @@
 #include <iostream>
 #include <algorithm>
 
-Inventory::Inventory() : nextId(1) {}
+Inventory::Inventory(DatabaseManager* db) : nextId(1), dbManager(db) {
+    loadFromDatabase();
+}
+
+void Inventory::loadFromDatabase() {
+    if (dbManager && dbManager->isConnected()) {
+        medications = dbManager->loadAllMedications();
+        
+        // Set nextId to be one more than the highest existing ID
+        if (!medications.empty()) {
+            int maxId = 0;
+            for (const auto& med : medications) {
+                if (med.getId() > maxId) {
+                    maxId = med.getId();
+                }
+            }
+            nextId = maxId + 1;
+        }
+        
+        std::cout << "Loaded " << medications.size() << " medications from database." << std::endl;
+    }
+}
 
 void Inventory::addMedication(const std::string& name, int quantity,
                               const std::string& expirationDate, double price) {
     Medication med(nextId++, name, quantity, expirationDate, price);
     medications.push_back(med);
-    std::cout << "Medication added successfully! ID: " << (nextId - 1) << std::endl;
+    
+    // Save to database
+    if (dbManager && dbManager->isConnected()) {
+        if (dbManager->saveMedication(med)) {
+            std::cout << "Medication added successfully! ID: " << (nextId - 1) << std::endl;
+        } else {
+            std::cout << "Warning: Medication added to memory but failed to save to database." << std::endl;
+        }
+    } else {
+        std::cout << "Medication added successfully! ID: " << (nextId - 1) << std::endl;
+    }
 }
 
 bool Inventory::removeMedication(int id) {
@@ -17,6 +48,12 @@ bool Inventory::removeMedication(int id) {
     
     if (it != medications.end()) {
         medications.erase(it, medications.end());
+        
+        // Remove from database
+        if (dbManager && dbManager->isConnected()) {
+            dbManager->deleteMedication(id);
+        }
+        
         std::cout << "Medication removed successfully!" << std::endl;
         return true;
     }
@@ -29,6 +66,12 @@ bool Inventory::updateQuantity(int id, int newQuantity) {
     Medication* med = findById(id);
     if (med) {
         med->setQuantity(newQuantity);
+        
+        // Update in database
+        if (dbManager && dbManager->isConnected()) {
+            dbManager->updateMedication(*med);
+        }
+        
         std::cout << "Quantity updated successfully!" << std::endl;
         return true;
     }
@@ -40,6 +83,12 @@ bool Inventory::updatePrice(int id, double newPrice) {
     Medication* med = findById(id);
     if (med) {
         med->setPrice(newPrice);
+        
+        // Update in database
+        if (dbManager && dbManager->isConnected()) {
+            dbManager->updateMedication(*med);
+        }
+        
         std::cout << "Price updated successfully!" << std::endl;
         return true;
     }

@@ -9,7 +9,14 @@ add_executable(PharmacyInventory
     src/main.cpp
     src/Medication.cpp
     src/Inventory.cpp
+    src/DatabaseManager.cpp
+    include/sqlite3.c
 )
 
 # Include directories
 target_include_directories(PharmacyInventory PRIVATE include)
+
+# Link libraries (needed for SQLite on Windows)
+if(WIN32)
+    target_link_libraries(PharmacyInventory PRIVATE -static-libgcc -static-libstdc++)
+endif()

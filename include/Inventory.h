@@ -2,6 +2,7 @@
 #define INVENTORY_H
 
 #include "Medication.h"
+#include "DatabaseManager.h"
 #include <vector>
 #include <string>
 
@@ -9,10 +10,14 @@ class Inventory {
 private:
     std::vector<Medication> medications;
     int nextId;
+    DatabaseManager* dbManager;
 
 public:
     // Constructor
-    Inventory();
+    Inventory(DatabaseManager* db);
+    
+    // Load data from database
+    void loadFromDatabase();
     
     // Core operations
     void addMedication(const std::string& name, int quantity, 

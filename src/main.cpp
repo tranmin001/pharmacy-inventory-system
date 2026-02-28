@@ -1,4 +1,5 @@
 #include "../include/Inventory.h"
+#include "../include/DatabaseManager.h"
 #include <iostream>
 #include <limits>
 
@@ -25,11 +26,23 @@ void clearInputBuffer() {
 }
 
 int main() {
-    Inventory inventory;
-    int choice;
-    
     std::cout << "Welcome to Pharmacy Inventory Management System!" << std::endl;
     std::cout << "Based on real pharmacy workflow experience at Safeway" << std::endl;
+    std::cout << "Now with SQLite database integration for persistent storage!" << std::endl;
+    std::cout << "\nInitializing database..." << std::endl;
+    
+    // Initialize database
+    DatabaseManager dbManager("pharmacy_inventory.db");
+    
+    std::cout << "Attempting to connect to database..." << std::endl;
+    if (!dbManager.connect()) {
+        std::cerr << "Failed to connect to database. Exiting..." << std::endl;
+        return 1;
+    }
+    std::cout << "Database initialization complete!" << std::endl;
+    
+    Inventory inventory(&dbManager);
+    int choice;
     
     while (true) {
         displayMenu();
@@ -116,6 +129,8 @@ int main() {
             
             case 9: {
                 std::cout << "\nThank you for using Pharmacy Inventory Management System!" << std::endl;
+                std::cout << "All data has been saved to database." << std::endl;
+                dbManager.disconnect();
                 return 0;
             }
             
