@@ -4,6 +4,9 @@ project(PharmacyInventory)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Compile sqlite3.c as C, not C++
+set_source_files_properties(include/sqlite3.c PROPERTIES LANGUAGE C)
+
 # Add executable
 add_executable(PharmacyInventory
     src/main.cpp
