@@ -70,6 +70,20 @@ body {
   margin-bottom: 20px;
 }
 
+.search-input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  min-width: 220px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #0f3460;
+}
+
 .inventory-count {
   color: #666;
   font-size: 0.9rem;

@@ -11,6 +11,7 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [showPredictions, setShowPredictions] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({
@@ -213,8 +214,17 @@ function App() {
               {showPredictions ? 'Hide Predictions' : 'View AI Predictions'}
             </button>
           </div>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search medications..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
           <div className="inventory-count">
-            {medications.length} item{medications.length !== 1 ? 's' : ''} in inventory
+            {searchTerm
+              ? `Showing ${medications.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase())).length} of ${medications.length}`
+              : `${medications.length} item${medications.length !== 1 ? 's' : ''} in inventory`}
           </div>
         </div>
 
@@ -363,7 +373,7 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {medications.map((med) => (
+                {medications.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase())).map((med) => (
                   <tr key={med.id} className={isExpired(med.expiration_date) ? 'row-expired' : ''}>
                     <td className="id-cell">#{med.id}</td>
                     <td className="name-cell">{med.name}</td>
