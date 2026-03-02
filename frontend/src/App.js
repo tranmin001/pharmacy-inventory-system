@@ -166,10 +166,10 @@ function App() {
 
   const getRiskColor = (risk) => {
     switch(risk) {
-      case 'CRITICAL': return '#dc2626';
-      case 'HIGH': return '#f59e0b';
-      case 'MEDIUM': return '#8b5cf6';
-      default: return '#10b981';
+      case 'CRITICAL': return '#DC2626';
+      case 'HIGH': return '#D97706';
+      case 'MEDIUM': return '#7c3aed';
+      default: return '#0D9488';
     }
   };
 
