@@ -1,0 +1,432 @@
+/* ── PharmTrack Landing Page ── */
+/* All classes prefixed lp- to avoid collisions with App.css */
+
+:root {
+  --lp-bg-dark: #0F172A;
+  --lp-bg-dark-lighter: #1E293B;
+  --lp-accent: #0D9488;
+  --lp-accent-hover: #0F766E;
+  --lp-text-light: #F8FAFC;
+  --lp-text-muted: #94A3B8;
+  --lp-white: #FFFFFF;
+  --lp-card-bg: #FFFFFF;
+  --lp-card-border: #E2E8F0;
+  --lp-about-bg: #F8FAFC;
+}
+
+/* ── Reset for landing page ── */
+.lp-page {
+  font-family: 'Manrope', sans-serif;
+  color: var(--lp-text-light);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.lp-page *,
+.lp-page *::before,
+.lp-page *::after {
+  box-sizing: border-box;
+}
+
+/* ── Scroll Reveal ── */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lp-reveal.lp-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger delays for hero children */
+.lp-stagger-1 { transition-delay: 0.1s; }
+.lp-stagger-2 { transition-delay: 0.3s; }
+.lp-stagger-3 { transition-delay: 0.5s; }
+.lp-stagger-4 { transition-delay: 0.7s; }
+
+/* ── Accent Bar Draw Animation ── */
+@keyframes lp-draw {
+  from { width: 0; }
+  to   { width: 60px; }
+}
+
+/* ══════════════════════════════════
+   HERO SECTION
+   ══════════════════════════════════ */
+.lp-hero {
+  min-height: 100vh;
+  background: var(--lp-bg-dark);
+  display: flex;
+  align-items: center;
+  padding: 0 10vw;
+  position: relative;
+}
+
+.lp-hero-inner {
+  max-width: 720px;
+}
+
+.lp-accent-bar {
+  display: block;
+  height: 4px;
+  width: 0;
+  background: var(--lp-accent);
+  border-radius: 2px;
+  margin-bottom: 32px;
+  animation: lp-draw 0.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.lp-hero-headline {
+  font-family: 'DM Serif Display', serif;
+  font-size: 4rem;
+  font-weight: 400;
+  line-height: 1.08;
+  color: var(--lp-text-light);
+  margin: 0 0 24px;
+  letter-spacing: -0.02em;
+}
+
+.lp-hero-subtitle {
+  font-size: 1.2rem;
+  color: var(--lp-text-muted);
+  max-width: 540px;
+  margin: 0 0 40px;
+  line-height: 1.7;
+}
+
+.lp-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: var(--lp-accent);
+  color: var(--lp-white);
+  font-family: 'Manrope', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  letter-spacing: 0.01em;
+}
+
+.lp-cta:hover {
+  background: var(--lp-accent-hover);
+  transform: translateY(-1px);
+}
+
+.lp-cta:active {
+  transform: translateY(0);
+}
+
+.lp-cta-arrow {
+  font-size: 1.15em;
+  transition: transform 0.2s;
+}
+
+.lp-cta:hover .lp-cta-arrow {
+  transform: translateX(3px);
+}
+
+/* ══════════════════════════════════
+   FEATURES SECTION
+   ══════════════════════════════════ */
+.lp-features {
+  background: var(--lp-card-bg);
+  padding: 100px 10vw;
+}
+
+.lp-section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--lp-accent);
+  margin: 0 0 12px;
+}
+
+.lp-section-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.4rem;
+  font-weight: 400;
+  color: var(--lp-bg-dark);
+  margin: 0 0 56px;
+  letter-spacing: -0.01em;
+}
+
+.lp-features-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.lp-feature-card {
+  background: var(--lp-white);
+  border: 1px solid var(--lp-card-border);
+  border-left: 3px solid var(--lp-accent);
+  border-radius: 8px;
+  padding: 32px;
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+
+.lp-feature-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.lp-feature-card h3 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--lp-bg-dark);
+  margin: 0 0 10px;
+}
+
+.lp-feature-card p {
+  font-size: 0.95rem;
+  color: #475569;
+  margin: 0;
+  line-height: 1.65;
+}
+
+/* ══════════════════════════════════
+   TECH STACK SECTION
+   ══════════════════════════════════ */
+.lp-tech {
+  background: var(--lp-bg-dark);
+  padding: 100px 10vw;
+}
+
+.lp-tech .lp-section-title {
+  color: var(--lp-text-light);
+}
+
+.lp-tech-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.lp-tech-col {
+  border-left: 3px solid var(--lp-accent);
+  padding: 24px;
+  background: var(--lp-bg-dark-lighter);
+  border-radius: 0 8px 8px 0;
+}
+
+.lp-tech-col h3 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--lp-text-light);
+  margin: 0 0 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lp-tech-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lp-tech-list li {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--lp-text-muted);
+  padding: 4px 0;
+}
+
+/* ══════════════════════════════════
+   ABOUT SECTION
+   ══════════════════════════════════ */
+.lp-about {
+  background: var(--lp-about-bg);
+  padding: 100px 10vw;
+}
+
+.lp-about .lp-section-title {
+  color: var(--lp-bg-dark);
+}
+
+.lp-about-text {
+  font-size: 1.05rem;
+  color: #475569;
+  max-width: 640px;
+  margin: 0 0 40px;
+  line-height: 1.75;
+}
+
+.lp-highlights-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--lp-accent);
+  margin: 0 0 16px;
+}
+
+.lp-highlights {
+  list-style: none;
+  margin: 0 0 48px;
+  padding: 0;
+}
+
+.lp-highlights li {
+  position: relative;
+  padding: 6px 0 6px 20px;
+  font-size: 0.95rem;
+  color: #334155;
+  line-height: 1.65;
+}
+
+.lp-highlights li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  width: 8px;
+  height: 8px;
+  background: var(--lp-accent);
+  border-radius: 50%;
+}
+
+.lp-about-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.lp-link {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--lp-accent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.lp-link:hover {
+  color: var(--lp-accent-hover);
+  text-decoration: underline;
+}
+
+/* ══════════════════════════════════
+   DARK MODE OVERRIDES
+   (only white/light sections need change)
+   ══════════════════════════════════ */
+[data-theme="dark"] .lp-features {
+  background: #1E293B;
+}
+
+[data-theme="dark"] .lp-feature-card {
+  background: #0F172A;
+  border-color: #334155;
+  border-left-color: var(--lp-accent);
+}
+
+[data-theme="dark"] .lp-feature-card h3 {
+  color: var(--lp-text-light);
+}
+
+[data-theme="dark"] .lp-feature-card p {
+  color: var(--lp-text-muted);
+}
+
+[data-theme="dark"] .lp-section-title {
+  color: var(--lp-text-light);
+}
+
+[data-theme="dark"] .lp-about {
+  background: #1E293B;
+}
+
+[data-theme="dark"] .lp-about-text,
+[data-theme="dark"] .lp-highlights li {
+  color: var(--lp-text-muted);
+}
+
+/* ══════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════ */
+@media (max-width: 768px) {
+  .lp-hero {
+    padding: 0 6vw;
+    min-height: 90vh;
+  }
+
+  .lp-hero-headline {
+    font-size: 2.6rem;
+  }
+
+  .lp-hero-subtitle {
+    font-size: 1.05rem;
+  }
+
+  .lp-features,
+  .lp-tech,
+  .lp-about {
+    padding: 72px 6vw;
+  }
+
+  .lp-features-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .lp-tech-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .lp-section-title {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-hero {
+    padding: 0 5vw;
+  }
+
+  .lp-hero-headline {
+    font-size: 2rem;
+  }
+
+  .lp-hero-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .lp-cta {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+  }
+
+  .lp-features,
+  .lp-tech,
+  .lp-about {
+    padding: 56px 5vw;
+  }
+
+  .lp-tech-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-section-title {
+    font-size: 1.65rem;
+    margin-bottom: 36px;
+  }
+
+  .lp-about-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+}

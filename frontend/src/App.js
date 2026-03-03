@@ -4,11 +4,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './App.css';
+import LandingPage from './LandingPage/LandingPage';
 
 const API_URL = 'http://127.0.0.1:5000/api';
 const STRENGTH_REGEX = /\d+\s*(?:mg|ml|mcg|g|ug|%|iu|meq|units?|caps?|tabs?|mg\/ml|mg\/5ml|mcg\/ml)/i;
 
 function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [medications, setMedications] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -640,6 +642,10 @@ function App() {
 
   if (loading) {
     return <div className="loading">Loading inventory...</div>;
+  }
+
+  if (showLanding) {
+    return <LandingPage onEnterApp={() => setShowLanding(false)} />;
   }
 
   return (
