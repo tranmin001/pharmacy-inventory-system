@@ -20,6 +20,14 @@ function App() {
     expiration_date: '',
     price: ''
   });
+  const [showShipmentModal, setShowShipmentModal] = useState(false);
+  const [shipmentData, setShipmentData] = useState({
+    shipment_id: '',
+    supplier_name: '',
+    date_received: new Date().toISOString().split('T')[0],
+    items: [{ medication_name: '', quantity: '', expiration_date: '', price: '' }]
+  });
+  const [shipmentLoading, setShipmentLoading] = useState(false);
 
   useEffect(() => {
     fetchMedications();
@@ -142,6 +150,115 @@ function App() {
     }
   };
 
+  const openShipmentModal = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/shipments/next-id`);
+      setShipmentData({
+        shipment_id: response.data.shipment_id,
+        supplier_name: '',
+        date_received: new Date().toISOString().split('T')[0],
+        items: [{ medication_name: '', quantity: '', expiration_date: '', price: '' }]
+      });
+      setShowShipmentModal(true);
+      setError('');
+    } catch (err) {
+      setError('Failed to generate shipment ID');
+    }
+  };
+
+  const addShipmentItem = () => {
+    setShipmentData({
+      ...shipmentData,
+      items: [...shipmentData.items, { medication_name: '', quantity: '', expiration_date: '', price: '' }]
+    });
+  };
+
+  const removeShipmentItem = (index) => {
+    if (shipmentData.items.length <= 1) return;
+    setShipmentData({
+      ...shipmentData,
+      items: shipmentData.items.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateShipmentItem = (index, field, value) => {
+    const updated = [...shipmentData.items];
+    updated[index] = { ...updated[index], [field]: value };
+    setShipmentData({ ...shipmentData, items: updated });
+  };
+
+  const validateShipment = () => {
+    if (!shipmentData.supplier_name.trim()) {
+      setError('Supplier name is required');
+      return false;
+    }
+    if (shipmentData.supplier_name.length > 200) {
+      setError('Supplier name too long (max 200 characters)');
+      return false;
+    }
+    if (!shipmentData.date_received) {
+      setError('Date received is required');
+      return false;
+    }
+    const recvDate = new Date(shipmentData.date_received);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (recvDate > today) {
+      setError('Date received cannot be in the future');
+      return false;
+    }
+    for (let i = 0; i < shipmentData.items.length; i++) {
+      const item = shipmentData.items[i];
+      if (!item.medication_name.trim()) {
+        setError(`Item ${i + 1}: Medication name is required`);
+        return false;
+      }
+      const qty = parseInt(item.quantity);
+      if (isNaN(qty) || qty < 1 || qty > 1000) {
+        setError(`Item ${i + 1}: Quantity must be between 1 and 1000`);
+        return false;
+      }
+      const price = parseFloat(item.price);
+      if (isNaN(price) || price < 0.01 || price > 10000) {
+        setError(`Item ${i + 1}: Price must be between $0.01 and $10,000`);
+        return false;
+      }
+      if (!item.expiration_date) {
+        setError(`Item ${i + 1}: Expiration date is required`);
+        return false;
+      }
+      const expDate = new Date(item.expiration_date);
+      if (expDate <= new Date()) {
+        setError(`Item ${i + 1}: Expiration date must be in the future`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleShipmentSubmit = async () => {
+    setError('');
+    if (!validateShipment()) return;
+    setShipmentLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/shipments`, shipmentData);
+      const result = response.data;
+      const created = result.items.filter(i => i.action === 'created').length;
+      const restocked = result.items.filter(i => i.action === 'restocked').length;
+      let msg = `Shipment ${result.shipment_id} received — ${result.total_items} units ($${result.total_value.toFixed(2)})`;
+      if (restocked > 0) msg += `, ${restocked} restocked`;
+      if (created > 0) msg += `, ${created} new`;
+      setSuccess(msg);
+      setShowShipmentModal(false);
+      fetchMedications();
+      fetchPredictions();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to process shipment');
+    } finally {
+      setShipmentLoading(false);
+    }
+  };
+
   const isExpired = (date) => new Date(date) < new Date();
   const isLowStock = (quantity) => quantity < 10;
   const isExpiringSoon = (date) => {
@@ -204,8 +321,14 @@ function App() {
             >
               {showForm ? 'Cancel' : '+ Add Medication'}
             </button>
-            <button 
-              className="btn btn-secondary" 
+            <button
+              className="btn btn-secondary"
+              onClick={openShipmentModal}
+            >
+              Receive Shipment
+            </button>
+            <button
+              className="btn btn-secondary"
               onClick={() => {
                 setShowPredictions(!showPredictions);
                 setShowForm(false);
@@ -395,6 +518,124 @@ function App() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {showShipmentModal && (
+          <div className="modal-overlay" onClick={() => setShowShipmentModal(false)}>
+            <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Receive Shipment</h2>
+                <button className="modal-close" onClick={() => setShowShipmentModal(false)}>X</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-row-3">
+                  <div className="form-group">
+                    <label>Shipment ID</label>
+                    <input type="text" className="input-disabled" value={shipmentData.shipment_id} disabled />
+                  </div>
+                  <div className="form-group">
+                    <label>Supplier Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., McKesson"
+                      value={shipmentData.supplier_name}
+                      onChange={(e) => setShipmentData({ ...shipmentData, supplier_name: e.target.value })}
+                      maxLength={200}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Date Received *</label>
+                    <input
+                      type="date"
+                      value={shipmentData.date_received}
+                      max={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setShipmentData({ ...shipmentData, date_received: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="section-header">
+                  <h3>Line Items</h3>
+                  <button className="btn btn-secondary btn-sm-action" onClick={addShipmentItem}>+ Add Item</button>
+                </div>
+                <div className="table-container modal-table-container">
+                  <table className="modal-table">
+                    <thead>
+                      <tr>
+                        <th>Medication Name</th>
+                        <th>Quantity</th>
+                        <th>Expiration Date</th>
+                        <th>Unit Price</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shipmentData.items.map((item, index) => (
+                        <tr key={index}>
+                          <td>
+                            <input
+                              type="text"
+                              placeholder="Medication name"
+                              value={item.medication_name}
+                              onChange={(e) => updateShipmentItem(index, 'medication_name', e.target.value)}
+                              maxLength={100}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              placeholder="Qty"
+                              min="1"
+                              max="1000"
+                              value={item.quantity}
+                              onChange={(e) => updateShipmentItem(index, 'quantity', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="date"
+                              min={getMinDate()}
+                              max={getMaxDate()}
+                              value={item.expiration_date}
+                              onChange={(e) => updateShipmentItem(index, 'expiration_date', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              placeholder="0.00"
+                              step="0.01"
+                              min="0.01"
+                              max="10000"
+                              value={item.price}
+                              onChange={(e) => updateShipmentItem(index, 'price', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <button
+                              className="btn-sm btn-delete"
+                              onClick={() => removeShipmentItem(index)}
+                              disabled={shipmentData.items.length <= 1}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowShipmentModal(false)}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleShipmentSubmit}
+                  disabled={shipmentLoading}
+                >
+                  {shipmentLoading ? 'Processing...' : 'Receive Shipment'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
