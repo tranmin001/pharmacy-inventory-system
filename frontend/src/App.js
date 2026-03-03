@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import './App.css';
 
 const API_URL = 'http://127.0.0.1:5000/api';
@@ -400,7 +400,7 @@ function App() {
       return parts.length ? parts.join(', ') : 'OK';
     };
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 42,
       head: [['ID', 'Medication', 'Qty', 'Expiration', 'Price', 'Status']],
       body: medications.map(m => [
@@ -437,7 +437,7 @@ function App() {
       doc.text(`Generated: ${today}`, 14, 30);
       doc.text(`Items to reorder: ${suggestions.length}`, 14, 36);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 42,
         head: [['Medication', 'Current Qty', 'Suggested Order', 'Reason']],
         body: suggestions.map(s => [
@@ -490,7 +490,7 @@ function App() {
         doc.text(`Items: ${s.total_items} units | Value: $${parseFloat(s.total_value).toFixed(2)}`, 14, yPos);
         yPos += 4;
 
-        doc.autoTable({
+        const table = autoTable(doc, {
           startY: yPos,
           head: [['Medication', 'Qty', 'Expiration', 'Price', 'Action']],
           body: s.items.map(i => [
@@ -505,7 +505,7 @@ function App() {
           alternateRowStyles: { fillColor: [248, 250, 251] },
           margin: { left: 14 },
         });
-        yPos = doc.lastAutoTable.finalY + 12;
+        yPos = table.finalY + 12;
       });
       doc.save('pharmacy-shipment-history.pdf');
       setSuccess('Shipment history exported as PDF');
