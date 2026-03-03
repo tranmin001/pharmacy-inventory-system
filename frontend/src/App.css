@@ -161,6 +161,20 @@ body {
 .toolbar-left {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.export-group {
+  display: flex;
+  gap: 4px;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+  margin-left: 2px;
+}
+
+.export-group .btn {
+  font-size: 0.8rem;
+  padding: 8px 12px;
 }
 
 .search-input {

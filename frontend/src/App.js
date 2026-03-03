@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import './App.css';
 
 const API_URL = 'http://127.0.0.1:5000/api';
@@ -367,6 +369,139 @@ function App() {
     }
   };
 
+  const exportInventoryPDF = () => {
+    const doc = new jsPDF();
+    const today = new Date().toLocaleDateString();
+    doc.setFontSize(18);
+    doc.setTextColor(15, 23, 42);
+    doc.text('PharmTrack — Inventory Report', 14, 22);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${today}`, 14, 30);
+    doc.text(`Total Items: ${medications.length}`, 14, 36);
+
+    const getStatus = (med) => {
+      const parts = [];
+      if (new Date(med.expiration_date) < new Date()) parts.push('Expired');
+      else if (isExpiringSoon(med.expiration_date)) parts.push('Expiring Soon');
+      if (med.quantity < 10) parts.push('Low Stock');
+      return parts.length ? parts.join(', ') : 'OK';
+    };
+
+    doc.autoTable({
+      startY: 42,
+      head: [['ID', 'Medication', 'Qty', 'Expiration', 'Price', 'Status']],
+      body: medications.map(m => [
+        m.id,
+        m.name,
+        m.quantity,
+        m.expiration_date,
+        `$${parseFloat(m.price).toFixed(2)}`,
+        getStatus(m)
+      ]),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [13, 148, 136], textColor: 255 },
+      alternateRowStyles: { fillColor: [248, 250, 251] },
+    });
+    doc.save('pharmacy-inventory-report.pdf');
+    setSuccess('Inventory report exported as PDF');
+  };
+
+  const exportReorderPDF = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/orders/suggestions`);
+      const suggestions = response.data;
+      if (suggestions.length === 0) {
+        setError('No items need reordering — nothing to export');
+        return;
+      }
+      const doc = new jsPDF();
+      const today = new Date().toLocaleDateString();
+      doc.setFontSize(18);
+      doc.setTextColor(15, 23, 42);
+      doc.text('PharmTrack — Reorder List', 14, 22);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated: ${today}`, 14, 30);
+      doc.text(`Items to reorder: ${suggestions.length}`, 14, 36);
+
+      doc.autoTable({
+        startY: 42,
+        head: [['Medication', 'Current Qty', 'Suggested Order', 'Reason']],
+        body: suggestions.map(s => [
+          s.medication_name,
+          s.current_quantity,
+          s.suggested_quantity,
+          s.reasons.join(', ')
+        ]),
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [217, 119, 6], textColor: 255 },
+        alternateRowStyles: { fillColor: [255, 251, 235] },
+      });
+      doc.save('pharmacy-reorder-list.pdf');
+      setSuccess('Reorder list exported as PDF');
+    } catch (err) {
+      setError('Failed to generate reorder PDF');
+    }
+  };
+
+  const exportShipmentsPDF = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/shipments`);
+      const shipments = response.data;
+      if (shipments.length === 0) {
+        setError('No shipment history to export');
+        return;
+      }
+      const doc = new jsPDF();
+      const today = new Date().toLocaleDateString();
+      doc.setFontSize(18);
+      doc.setTextColor(15, 23, 42);
+      doc.text('PharmTrack — Shipment History', 14, 22);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated: ${today}`, 14, 30);
+      doc.text(`Total shipments: ${shipments.length}`, 14, 36);
+
+      let yPos = 42;
+      shipments.forEach((s, idx) => {
+        if (yPos > 250) {
+          doc.addPage();
+          yPos = 20;
+        }
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text(`${s.shipment_id} — ${s.supplier_name} (${s.date_received})`, 14, yPos);
+        yPos += 6;
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Items: ${s.total_items} units | Value: $${parseFloat(s.total_value).toFixed(2)}`, 14, yPos);
+        yPos += 4;
+
+        doc.autoTable({
+          startY: yPos,
+          head: [['Medication', 'Qty', 'Expiration', 'Price', 'Action']],
+          body: s.items.map(i => [
+            i.medication_name,
+            i.quantity,
+            i.expiration_date,
+            `$${parseFloat(i.price).toFixed(2)}`,
+            i.action
+          ]),
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [13, 148, 136], textColor: 255 },
+          alternateRowStyles: { fillColor: [248, 250, 251] },
+          margin: { left: 14 },
+        });
+        yPos = doc.lastAutoTable.finalY + 12;
+      });
+      doc.save('pharmacy-shipment-history.pdf');
+      setSuccess('Shipment history exported as PDF');
+    } catch (err) {
+      setError('Failed to generate shipment PDF');
+    }
+  };
+
   const isExpired = (date) => new Date(date) < new Date();
   const isLowStock = (quantity) => quantity < 10;
   const isExpiringSoon = (date) => {
@@ -516,6 +651,11 @@ function App() {
             >
               {showPredictions ? 'Hide Predictions' : 'View AI Predictions'}
             </button>
+            <div className="export-group">
+              <button className="btn btn-secondary" onClick={exportInventoryPDF}>Export Inventory</button>
+              <button className="btn btn-secondary" onClick={exportReorderPDF}>Export Reorder</button>
+              <button className="btn btn-secondary" onClick={exportShipmentsPDF}>Export Shipments</button>
+            </div>
           </div>
           <input
             type="text"
