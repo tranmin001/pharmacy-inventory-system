@@ -28,6 +28,13 @@ function App() {
     items: [{ medication_name: '', quantity: '', expiration_date: '', price: '' }]
   });
   const [shipmentLoading, setShipmentLoading] = useState(false);
+  const [showReorderModal, setShowReorderModal] = useState(false);
+  const [reorderSuggestions, setReorderSuggestions] = useState([]);
+  const [reorderSelected, setReorderSelected] = useState({});
+  const [reorderNotes, setReorderNotes] = useState('');
+  const [reorderLoading, setReorderLoading] = useState(false);
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [orders, setOrders] = useState([]);
 
   useEffect(() => {
     fetchMedications();
@@ -259,6 +266,105 @@ function App() {
     }
   };
 
+  const openReorderModal = async () => {
+    setReorderLoading(true);
+    setError('');
+    try {
+      const response = await axios.get(`${API_URL}/orders/suggestions`);
+      const suggestions = response.data;
+      setReorderSuggestions(suggestions);
+      const selected = {};
+      suggestions.forEach(s => {
+        selected[s.medication_id] = { selected: true, order_quantity: s.suggested_quantity };
+      });
+      setReorderSelected(selected);
+      setReorderNotes('');
+      setShowReorderModal(true);
+    } catch (err) {
+      setError('Failed to load reorder suggestions');
+    } finally {
+      setReorderLoading(false);
+    }
+  };
+
+  const toggleReorderItem = (medId) => {
+    setReorderSelected({
+      ...reorderSelected,
+      [medId]: { ...reorderSelected[medId], selected: !reorderSelected[medId]?.selected }
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allSelected = Object.values(reorderSelected).every(v => v.selected);
+    const updated = {};
+    Object.keys(reorderSelected).forEach(id => {
+      updated[id] = { ...reorderSelected[id], selected: !allSelected };
+    });
+    setReorderSelected(updated);
+  };
+
+  const updateOrderQuantity = (medId, qty) => {
+    setReorderSelected({
+      ...reorderSelected,
+      [medId]: { ...reorderSelected[medId], order_quantity: qty }
+    });
+  };
+
+  const handleReorderSubmit = async () => {
+    const selectedItems = reorderSuggestions
+      .filter(s => reorderSelected[s.medication_id]?.selected)
+      .map(s => ({
+        medication_id: s.medication_id,
+        medication_name: s.medication_name,
+        current_quantity: s.current_quantity,
+        order_quantity: parseInt(reorderSelected[s.medication_id]?.order_quantity) || s.suggested_quantity,
+        reason: s.reasons.join(', ')
+      }));
+    if (selectedItems.length === 0) {
+      setError('Select at least one item to reorder');
+      return;
+    }
+    for (let i = 0; i < selectedItems.length; i++) {
+      if (selectedItems[i].order_quantity < 1 || selectedItems[i].order_quantity > 1000) {
+        setError(`${selectedItems[i].medication_name}: Order quantity must be between 1 and 1000`);
+        return;
+      }
+    }
+    setReorderLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/orders`, {
+        items: selectedItems,
+        notes: reorderNotes
+      });
+      setSuccess(`Reorder ${response.data.order_id} created with ${selectedItems.length} items`);
+      setShowReorderModal(false);
+      fetchOrders();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create reorder');
+    } finally {
+      setReorderLoading(false);
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/orders`);
+      setOrders(response.data);
+    } catch (err) {
+      console.error('Failed to load orders');
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await axios.put(`${API_URL}/orders/${orderId}/status`, { status: newStatus });
+      setSuccess(`Order ${orderId} marked as ${newStatus}`);
+      fetchOrders();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update order status');
+    }
+  };
+
   const isExpired = (date) => new Date(date) < new Date();
   const isLowStock = (quantity) => quantity < 10;
   const isExpiringSoon = (date) => {
@@ -329,9 +435,27 @@ function App() {
             </button>
             <button
               className="btn btn-secondary"
+              onClick={openReorderModal}
+            >
+              Generate Reorder
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowOrderHistory(!showOrderHistory);
+                setShowForm(false);
+                setShowPredictions(false);
+                if (!showOrderHistory) fetchOrders();
+              }}
+            >
+              {showOrderHistory ? 'Hide Orders' : 'Order History'}
+            </button>
+            <button
+              className="btn btn-secondary"
               onClick={() => {
                 setShowPredictions(!showPredictions);
                 setShowForm(false);
+                setShowOrderHistory(false);
               }}
             >
               {showPredictions ? 'Hide Predictions' : 'View AI Predictions'}
@@ -457,6 +581,63 @@ function App() {
           </div>
         )}
 
+        {showOrderHistory && (
+          <div className="predictions-panel">
+            <h2>Order History</h2>
+            <p className="predictions-subtitle">Track reorder status from pending to received</p>
+            {orders.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No orders yet. Use "Generate Reorder" to create one.</p>
+            ) : (
+              <div className="orders-list">
+                {orders.map(order => (
+                  <div key={order.order_id} className="order-card">
+                    <div className="order-header">
+                      <div>
+                        <strong>{order.order_id}</strong>
+                        <span className="order-date">{order.created_at}</span>
+                      </div>
+                      <div className="order-header-right">
+                        <span className={`badge badge-order-${order.status}`}>{order.status}</span>
+                        {order.status === 'pending' && (
+                          <button className="btn-sm btn-edit" onClick={() => handleUpdateOrderStatus(order.order_id, 'submitted')}>Mark Submitted</button>
+                        )}
+                        {order.status === 'submitted' && (
+                          <button className="btn-sm btn-edit" onClick={() => handleUpdateOrderStatus(order.order_id, 'received')}>Mark Received</button>
+                        )}
+                      </div>
+                    </div>
+                    {order.notes && <div className="order-notes">{order.notes}</div>}
+                    <table className="modal-table">
+                      <thead>
+                        <tr>
+                          <th>Medication</th>
+                          <th>Current Qty</th>
+                          <th>Order Qty</th>
+                          <th>Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {order.items.map((item, i) => (
+                          <tr key={i}>
+                            <td>{item.medication_name}</td>
+                            <td>{item.current_quantity}</td>
+                            <td><strong>{item.order_quantity}</strong></td>
+                            <td>
+                              {item.reason.split(', ').map((r, j) => (
+                                <span key={j} className="badge badge-low" style={{ marginRight: '4px', fontSize: '0.65rem' }}>{r}</span>
+                              ))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="stats-bar">
           <div className="stat">
             <span className="stat-value">{medications.length}</span>
@@ -518,6 +699,103 @@ function App() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {showReorderModal && (
+          <div className="modal-overlay" onClick={() => setShowReorderModal(false)}>
+            <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Generate Reorder</h2>
+                <button className="modal-close" onClick={() => setShowReorderModal(false)}>X</button>
+              </div>
+              <div className="modal-body">
+                {reorderSuggestions.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px' }}>
+                    No items need reordering right now. All stock levels are healthy.
+                  </p>
+                ) : (
+                  <>
+                    <div className="section-header">
+                      <h3>{reorderSuggestions.length} items suggested</h3>
+                      <button className="btn btn-secondary btn-sm-action" onClick={toggleSelectAll}>
+                        {Object.values(reorderSelected).every(v => v.selected) ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                    <div className="table-container modal-table-container">
+                      <table className="reorder-table">
+                        <thead>
+                          <tr>
+                            <th></th>
+                            <th>Medication</th>
+                            <th>Current Qty</th>
+                            <th>Order Qty</th>
+                            <th>Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reorderSuggestions.map(s => (
+                            <tr key={s.medication_id} className={!reorderSelected[s.medication_id]?.selected ? 'row-deselected' : ''}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={reorderSelected[s.medication_id]?.selected || false}
+                                  onChange={() => toggleReorderItem(s.medication_id)}
+                                />
+                              </td>
+                              <td className="name-cell">{s.medication_name}</td>
+                              <td>{s.current_quantity}</td>
+                              <td>
+                                <input
+                                  type="number"
+                                  className="qty-input"
+                                  min="1"
+                                  max="1000"
+                                  value={reorderSelected[s.medication_id]?.order_quantity || ''}
+                                  onChange={(e) => updateOrderQuantity(s.medication_id, e.target.value)}
+                                  disabled={!reorderSelected[s.medication_id]?.selected}
+                                />
+                              </td>
+                              <td>
+                                {s.reasons.map((r, i) => (
+                                  <span
+                                    key={i}
+                                    className="badge badge-low"
+                                    style={{ marginRight: '4px', fontSize: '0.65rem' }}
+                                  >
+                                    {r}
+                                  </span>
+                                ))}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="form-group" style={{ marginTop: '16px' }}>
+                      <label>Notes (optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Urgent restock for flu season"
+                        value={reorderNotes}
+                        onChange={(e) => setReorderNotes(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowReorderModal(false)}>Cancel</button>
+                {reorderSuggestions.length > 0 && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleReorderSubmit}
+                    disabled={reorderLoading}
+                  >
+                    {reorderLoading ? 'Submitting...' : `Create Order (${Object.values(reorderSelected).filter(v => v.selected).length} items)`}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
         {showShipmentModal && (

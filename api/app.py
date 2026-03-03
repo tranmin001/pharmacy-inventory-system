@@ -380,6 +380,129 @@ def get_shipments():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/orders/suggestions', methods=['GET'])
+def get_order_suggestions():
+    try:
+        conn = get_db_connection()
+        medications = conn.execute('SELECT * FROM medications').fetchall()
+        conn.close()
+        meds_list = [dict(med) for med in medications]
+        predictor = InventoryPredictor()
+        predictions = predictor.get_all_predictions(meds_list)
+        pred_map = {p['medication_id']: p for p in predictions}
+
+        today = datetime.now().date()
+        thirty_days = today + timedelta(days=30)
+        suggestions = []
+        for med in meds_list:
+            reasons = []
+            if med['quantity'] < 10:
+                reasons.append('Low Stock')
+            try:
+                exp_date = datetime.strptime(med['expiration_date'], '%Y-%m-%d').date()
+                if exp_date <= thirty_days and exp_date > today:
+                    reasons.append('Expiring Soon')
+            except ValueError:
+                pass
+            pred = pred_map.get(med['id'])
+            if pred and pred.get('risk_level') in ('CRITICAL', 'HIGH'):
+                reasons.append(f"ML: {pred['risk_level']}")
+            if reasons:
+                order_qty = pred['recommended_order_quantity'] if pred else (50 if med['quantity'] < 5 else 30)
+                suggestions.append({
+                    'medication_id': med['id'],
+                    'medication_name': med['name'],
+                    'current_quantity': med['quantity'],
+                    'suggested_quantity': order_qty,
+                    'reasons': reasons,
+                    'risk_level': pred['risk_level'] if pred else 'MEDIUM'
+                })
+        return jsonify(suggestions), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/orders', methods=['POST'])
+def create_order():
+    try:
+        data = request.get_json()
+        items = data.get('items', [])
+        if len(items) < 1:
+            return jsonify({'error': 'Order must contain at least one item'}), 400
+        for i, item in enumerate(items):
+            if not item.get('medication_name', '').strip():
+                return jsonify({'error': f'Item {i+1}: Medication name is required'}), 400
+            try:
+                qty = int(item['order_quantity'])
+                if qty < 1 or qty > 1000:
+                    return jsonify({'error': f'Item {i+1}: Order quantity must be between 1 and 1000'}), 400
+            except (ValueError, TypeError):
+                return jsonify({'error': f'Item {i+1}: Invalid order quantity'}), 400
+
+        order_id = generate_order_id()
+        notes = data.get('notes', '').strip()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO orders (order_id, status, total_items, notes) VALUES (?, ?, ?, ?)',
+            (order_id, 'pending', len(items), notes)
+        )
+        for item in items:
+            cursor.execute(
+                'INSERT INTO order_items (order_id, medication_id, medication_name, current_quantity, order_quantity, reason) VALUES (?, ?, ?, ?, ?, ?)',
+                (order_id, item.get('medication_id'), item['medication_name'], int(item.get('current_quantity', 0)), int(item['order_quantity']), item.get('reason', ''))
+            )
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Order created successfully', 'order_id': order_id}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/orders', methods=['GET'])
+def get_orders():
+    try:
+        conn = get_db_connection()
+        orders = conn.execute('SELECT * FROM orders ORDER BY created_at DESC').fetchall()
+        result = []
+        for o in orders:
+            order = dict(o)
+            items = conn.execute(
+                'SELECT * FROM order_items WHERE order_id = ?', (o['order_id'],)
+            ).fetchall()
+            order['items'] = [dict(item) for item in items]
+            result.append(order)
+        conn.close()
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/orders/<order_id>/status', methods=['PUT'])
+def update_order_status(order_id):
+    try:
+        data = request.get_json()
+        new_status = data.get('status')
+        valid_transitions = {
+            'pending': 'submitted',
+            'submitted': 'received'
+        }
+        conn = get_db_connection()
+        order = conn.execute('SELECT * FROM orders WHERE order_id = ?', (order_id,)).fetchone()
+        if not order:
+            conn.close()
+            return jsonify({'error': 'Order not found'}), 404
+        expected = valid_transitions.get(order['status'])
+        if new_status != expected:
+            conn.close()
+            return jsonify({'error': f"Cannot transition from '{order['status']}' to '{new_status}'"}), 400
+        conn.execute(
+            "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE order_id = ?",
+            (new_status, order_id)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({'message': f'Order status updated to {new_status}'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy', 'message': 'Pharmacy API is running'}), 200
