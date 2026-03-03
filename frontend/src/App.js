@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import './App.css';
 
 const API_URL = 'http://127.0.0.1:5000/api';
+const STRENGTH_REGEX = /\d+\s*(?:mg|ml|mcg|g|ug|%|iu|meq|units?|caps?|tabs?|mg\/ml|mg\/5ml|mcg\/ml)/i;
 
 function App() {
   const [medications, setMedications] = useState([]);
@@ -94,6 +95,10 @@ function App() {
     }
     if (formData.name.length > 100) {
       setError('Medication name too long (max 100 characters)');
+      return false;
+    }
+    if (!STRENGTH_REGEX.test(formData.name)) {
+      setError('Medication name must include a strength (e.g. "Amoxicillin 500mg"). Include the dosage/concentration.');
       return false;
     }
     const qty = parseInt(formData.quantity);
@@ -234,6 +239,10 @@ function App() {
       const item = shipmentData.items[i];
       if (!item.medication_name.trim()) {
         setError(`Item ${i + 1}: Medication name is required`);
+        return false;
+      }
+      if (!STRENGTH_REGEX.test(item.medication_name)) {
+        setError(`Item ${i + 1}: Medication name must include a strength (e.g. "Amoxicillin 500mg")`);
         return false;
       }
       const qty = parseInt(item.quantity);
@@ -767,7 +776,7 @@ function App() {
             <h2>{editingId ? 'Edit Medication' : 'Add New Medication'}</h2>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Medication Name *</label>
+                <label>Medication Name & Strength *</label>
                 <input
                   type="text"
                   placeholder="e.g., Amoxicillin 500mg"
@@ -1208,7 +1217,7 @@ function App() {
                           <td>
                             <input
                               type="text"
-                              placeholder="Medication name"
+                              placeholder="e.g., Ibuprofen 200mg"
                               value={item.medication_name}
                               onChange={(e) => updateShipmentItem(index, 'medication_name', e.target.value)}
                               maxLength={100}

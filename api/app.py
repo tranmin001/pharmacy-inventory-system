@@ -2,8 +2,25 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
 import os
+import re
 from datetime import datetime, timedelta
 from predictor import InventoryPredictor
+
+STRENGTH_PATTERN = re.compile(
+    r'\d+\s*(?:mg|ml|mcg|g|ug|%|iu|meq|units?|caps?|tabs?|mg/ml|mg/5ml|mcg/ml)',
+    re.IGNORECASE
+)
+
+def validate_medication_name(name):
+    """Require both a drug name and a strength (e.g. 'Amoxicillin 500mg')."""
+    stripped = name.strip()
+    if not stripped:
+        return False, 'Medication name cannot be empty'
+    if len(stripped) > 100:
+        return False, 'Medication name too long (max 100 characters)'
+    if not STRENGTH_PATTERN.search(stripped):
+        return False, 'Medication name must include a strength (e.g. "Amoxicillin 500mg"). Include the dosage/concentration.'
+    return True, None
 
 app = Flask(__name__)
 CORS(app)
@@ -110,10 +127,9 @@ def add_medication():
         required_fields = ['name', 'quantity', 'expiration_date', 'price']
         if not all(field in data for field in required_fields):
             return jsonify({'error': 'Missing required fields'}), 400
-        if not data['name'].strip():
-            return jsonify({'error': 'Medication name cannot be empty'}), 400
-        if len(data['name']) > 100:
-            return jsonify({'error': 'Medication name too long (max 100 characters)'}), 400
+        valid, err_msg = validate_medication_name(data['name'])
+        if not valid:
+            return jsonify({'error': err_msg}), 400
         try:
             quantity = int(data['quantity'])
             if quantity < 1 or quantity > 1000:
@@ -152,8 +168,9 @@ def add_medication():
 def update_medication(med_id):
     try:
         data = request.get_json()
-        if not data.get('name', '').strip():
-            return jsonify({'error': 'Medication name cannot be empty'}), 400
+        valid, err_msg = validate_medication_name(data.get('name', ''))
+        if not valid:
+            return jsonify({'error': err_msg}), 400
         try:
             quantity = int(data['quantity'])
             if quantity < 0 or quantity > 1000:
@@ -271,10 +288,9 @@ def create_shipment():
         if len(items) < 1:
             return jsonify({'error': 'Shipment must contain at least one item'}), 400
         for i, item in enumerate(items):
-            if not item.get('medication_name', '').strip():
-                return jsonify({'error': f'Item {i+1}: Medication name is required'}), 400
-            if len(item['medication_name']) > 100:
-                return jsonify({'error': f'Item {i+1}: Medication name too long (max 100 characters)'}), 400
+            valid, err_msg = validate_medication_name(item.get('medication_name', ''))
+            if not valid:
+                return jsonify({'error': f'Item {i+1}: {err_msg}'}), 400
             try:
                 qty = int(item['quantity'])
                 if qty < 1 or qty > 1000:
