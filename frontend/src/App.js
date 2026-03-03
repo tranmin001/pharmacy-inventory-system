@@ -895,6 +895,12 @@ function App() {
                       <span className="stat-label">Recommended Order</span>
                       <span className="stat-value">{pred.recommended_order_quantity} units</span>
                     </div>
+                    {pred.expires_before_stockout && (
+                      <div className="prediction-stat" style={{ background: 'var(--danger-light)', margin: '0 -16px', padding: '10px 16px', borderRadius: '0 0 var(--radius) var(--radius)', marginBottom: '-16px' }}>
+                        <span className="stat-label" style={{ color: 'var(--danger)', fontWeight: 600 }}>Expires before stockout</span>
+                        <span className="stat-value" style={{ color: 'var(--danger)' }}>Replacement needed</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
