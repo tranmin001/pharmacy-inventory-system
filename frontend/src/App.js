@@ -499,7 +499,7 @@ function App() {
         doc.text(`Items: ${s.total_items} units | Value: $${parseFloat(s.total_value).toFixed(2)}`, 14, yPos);
         yPos += 4;
 
-        const table = autoTable(doc, {
+        autoTable(doc, {
           startY: yPos,
           head: [['Medication', 'Qty', 'Expiration', 'Price', 'Action']],
           body: s.items.map(i => [
@@ -514,7 +514,7 @@ function App() {
           alternateRowStyles: { fillColor: [248, 250, 251] },
           margin: { left: 14 },
         });
-        yPos = table.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
       });
       doc.save('pharmacy-shipment-history.pdf');
       setSuccess('Shipment history exported as PDF');
