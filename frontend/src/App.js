@@ -40,6 +40,12 @@ function App() {
   const [orders, setOrders] = useState([]);
   const [showCharts, setShowCharts] = useState(false);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('pharmtrack-dark-mode') === 'true');
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [expirationFrom, setExpirationFrom] = useState('');
+  const [expirationTo, setExpirationTo] = useState('');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
 
   useEffect(() => {
     fetchMedications();
@@ -518,6 +524,36 @@ function App() {
     return expDate > today && expDate <= thirtyDays;
   };
 
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setExpirationFrom('');
+    setExpirationTo('');
+    setPriceMin('');
+    setPriceMax('');
+  };
+
+  const hasActiveFilters = statusFilter !== 'all' || expirationFrom || expirationTo || priceMin || priceMax;
+
+  const getFilteredMedications = () => {
+    return medications.filter(m => {
+      if (searchTerm && !m.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'expired' && !isExpired(m.expiration_date)) return false;
+        if (statusFilter === 'expiring' && !isExpiringSoon(m.expiration_date)) return false;
+        if (statusFilter === 'low' && !isLowStock(m.quantity)) return false;
+        if (statusFilter === 'ok' && (isExpired(m.expiration_date) || isExpiringSoon(m.expiration_date) || isLowStock(m.quantity))) return false;
+      }
+      if (expirationFrom && m.expiration_date < expirationFrom) return false;
+      if (expirationTo && m.expiration_date > expirationTo) return false;
+      const price = parseFloat(m.price);
+      if (priceMin && price < parseFloat(priceMin)) return false;
+      if (priceMax && price > parseFloat(priceMax)) return false;
+      return true;
+    });
+  };
+
+  const filteredMedications = getFilteredMedications();
+
   const getMinDate = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -677,12 +713,54 @@ function App() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <button
+            className={`btn btn-secondary${showFilters ? ' btn-filter-active' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            {showFilters ? 'Hide Filters' : 'Filters'}{hasActiveFilters ? ' *' : ''}
+          </button>
           <div className="inventory-count">
-            {searchTerm
-              ? `Showing ${medications.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase())).length} of ${medications.length}`
+            {(searchTerm || hasActiveFilters)
+              ? `Showing ${filteredMedications.length} of ${medications.length}`
               : `${medications.length} item${medications.length !== 1 ? 's' : ''} in inventory`}
           </div>
         </div>
+
+        {showFilters && (
+          <div className="filter-panel">
+            <div className="filter-row">
+              <div className="filter-group">
+                <label>Status</label>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="all">All Statuses</option>
+                  <option value="ok">OK</option>
+                  <option value="low">Low Stock</option>
+                  <option value="expiring">Expiring Soon</option>
+                  <option value="expired">Expired</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Expiration From</label>
+                <input type="date" value={expirationFrom} onChange={(e) => setExpirationFrom(e.target.value)} />
+              </div>
+              <div className="filter-group">
+                <label>Expiration To</label>
+                <input type="date" value={expirationTo} onChange={(e) => setExpirationTo(e.target.value)} />
+              </div>
+              <div className="filter-group">
+                <label>Min Price</label>
+                <input type="number" placeholder="$0" step="0.01" min="0" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
+              </div>
+              <div className="filter-group">
+                <label>Max Price</label>
+                <input type="number" placeholder="$10,000" step="0.01" min="0" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
+              </div>
+              {hasActiveFilters && (
+                <button className="btn btn-secondary btn-sm-action filter-clear" onClick={clearFilters}>Clear</button>
+              )}
+            </div>
+          </div>
+        )}
 
         {showForm && (
           <div className="form-card">
@@ -955,7 +1033,7 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {medications.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase())).map((med) => (
+                {filteredMedications.map((med) => (
                   <tr key={med.id} className={isExpired(med.expiration_date) ? 'row-expired' : ''}>
                     <td className="id-cell">#{med.id}</td>
                     <td className="name-cell">{med.name}</td>
