@@ -39,6 +39,7 @@ function App() {
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [orders, setOrders] = useState([]);
   const [showCharts, setShowCharts] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('pharmtrack-dark-mode') === 'true');
 
   useEffect(() => {
     fetchMedications();
@@ -54,6 +55,11 @@ function App() {
       return () => clearTimeout(timer);
     }
   }, [error, success]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('pharmtrack-dark-mode', darkMode);
+  }, [darkMode]);
 
   const fetchMedications = async () => {
     try {
@@ -583,8 +589,15 @@ function App() {
     <div className="App">
       <header className="header">
         <div className="header-content">
-          <h1>PharmTrack</h1>
-          <p>Inventory Management System</p>
+          <div className="header-top">
+            <div>
+              <h1>PharmTrack</h1>
+              <p>Inventory Management System</p>
+            </div>
+            <button className="btn btn-secondary btn-dark-toggle" onClick={() => setDarkMode(!darkMode)}>
+              {darkMode ? 'Light Mode' : 'Dark Mode'}
+            </button>
+          </div>
         </div>
       </header>
 
