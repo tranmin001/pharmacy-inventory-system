@@ -47,6 +47,8 @@ function App() {
   const [expirationTo, setExpirationTo] = useState('');
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
+  const [showShipmentHistory, setShowShipmentHistory] = useState(false);
+  const [shipmentHistory, setShipmentHistory] = useState([]);
 
   useEffect(() => {
     fetchMedications();
@@ -284,6 +286,7 @@ function App() {
       setShowShipmentModal(false);
       fetchMedications();
       fetchPredictions();
+      if (showShipmentHistory) fetchShipmentHistory();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to process shipment');
     } finally {
@@ -377,6 +380,15 @@ function App() {
       setOrders(response.data);
     } catch (err) {
       console.error('Failed to load orders');
+    }
+  };
+
+  const fetchShipmentHistory = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/shipments`);
+      setShipmentHistory(response.data);
+    } catch (err) {
+      console.error('Failed to load shipment history');
     }
   };
 
@@ -690,6 +702,19 @@ function App() {
             <button
               className="btn btn-secondary"
               onClick={() => {
+                setShowShipmentHistory(!showShipmentHistory);
+                setShowForm(false);
+                setShowPredictions(false);
+                setShowOrderHistory(false);
+                setShowCharts(false);
+                if (!showShipmentHistory) fetchShipmentHistory();
+              }}
+            >
+              {showShipmentHistory ? 'Hide Shipments' : 'Shipment History'}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
                 setShowCharts(!showCharts);
                 setShowForm(false);
                 setShowPredictions(false);
@@ -922,6 +947,61 @@ function App() {
                               {item.reason.split(', ').map((r, j) => (
                                 <span key={j} className="badge badge-low" style={{ marginRight: '4px', fontSize: '0.65rem' }}>{r}</span>
                               ))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {showShipmentHistory && (
+          <div className="predictions-panel">
+            <h2>Shipment History</h2>
+            <p className="predictions-subtitle">Record of all received shipments and their line items</p>
+            {shipmentHistory.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No shipments received yet. Use "Receive Shipment" to log one.</p>
+            ) : (
+              <div className="orders-list">
+                {shipmentHistory.map(shipment => (
+                  <div key={shipment.shipment_id} className="order-card">
+                    <div className="order-header">
+                      <div>
+                        <strong>{shipment.shipment_id}</strong>
+                        <span className="order-date">{shipment.supplier_name}</span>
+                      </div>
+                      <div className="order-header-right">
+                        <span className="badge badge-ok">{shipment.date_received}</span>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          {shipment.total_items} units — ${parseFloat(shipment.total_value).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <table className="modal-table">
+                      <thead>
+                        <tr>
+                          <th>Medication</th>
+                          <th>Qty</th>
+                          <th>Expiration</th>
+                          <th>Price</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shipment.items.map((item, i) => (
+                          <tr key={i}>
+                            <td>{item.medication_name}</td>
+                            <td>{item.quantity}</td>
+                            <td>{item.expiration_date}</td>
+                            <td>${parseFloat(item.price).toFixed(2)}</td>
+                            <td>
+                              <span className={`badge ${item.action === 'created' ? 'badge-ok' : 'badge-low'}`}>
+                                {item.action}
+                              </span>
                             </td>
                           </tr>
                         ))}
