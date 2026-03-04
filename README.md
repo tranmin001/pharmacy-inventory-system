@@ -9,48 +9,25 @@ A full-stack pharmacy inventory management system with ML-powered stockout predi
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.6-F7931E?logo=scikitlearn&logoColor=white)
 
-## Live Demo
-
-**[pharmacy-inventory-system-three.vercel.app](https://pharmacy-inventory-system-three.vercel.app)**
-
-| Service | Platform | URL |
-|---------|----------|-----|
-| Frontend | Vercel | [pharmacy-inventory-system-three.vercel.app](https://pharmacy-inventory-system-three.vercel.app) |
-| API | Railway | [pharmacy-inventory-system-production.up.railway.app](https://pharmacy-inventory-system-production.up.railway.app) |
-
----
-
-## Screenshots
-
-<!-- Replace these with actual screenshots -->
-| Dashboard | Stockout Predictions |
-|-----------|---------------------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Predictions](docs/screenshots/predictions.png) |
-
-| Shipment Receiving | Reorder System |
-|-------------------|----------------|
-| ![Shipments](docs/screenshots/shipments.png) | ![Reorder](docs/screenshots/reorder.png) |
-
-*Screenshots coming soon*
+**[View Live Demo](https://pharmacy-inventory-system-three.vercel.app)**
 
 ---
 
 ## Features
 
-- **Full CRUD Inventory Management** — Add, edit, delete medications with validation for name, strength, quantity, price, and expiration date
-- **Real-Time Search** — Instantly filter medications by name as you type
-- **ML-Powered Stockout Predictions** — scikit-learn LinearRegression model analyzes usage patterns and flags medications at critical, high, or medium risk of running out
-- **Bulk Shipment Receiving** — Receive multi-item shipments in one form, with automatic inventory updates and full shipment history
-- **Automated Reorder System** — Auto-generated reorder suggestions based on stock levels, with one-click order placement and status tracking
-- **Data Visualization** — Interactive Recharts bar charts for inventory levels and prediction risk distribution
-- **PDF Export** — Generate downloadable PDF reports for inventory lists, reorder suggestions, and shipment records
-- **Advanced Filtering** — Filter by stock status (low stock, expired, expiring soon), sort by any column
-- **Dark Mode** — Toggle between light and dark themes, persisted in localStorage
-- **Landing Page** — Portfolio-style landing page with scroll animations and project overview
+- **Inventory Management** — Full CRUD for medications with validation on name, strength, quantity, price, and expiration
+- **Real-Time Search** — Filter medications by name as you type
+- **Stockout Predictions** — scikit-learn model analyzes usage patterns and flags medications at critical, high, or medium risk
+- **Bulk Shipment Receiving** — Receive multi-item shipments with automatic inventory updates and shipment history
+- **Automated Reorder System** — Reorder suggestions based on stock levels, with one-click order placement and status tracking
+- **Data Visualization** — Interactive Recharts charts for inventory levels and risk distribution
+- **PDF Export** — Downloadable reports for inventory, reorder lists, and shipment records
+- **Advanced Filtering** — Filter by stock status (low, expired, expiring soon) and sort by any column
+- **Dark Mode** — Light/dark theme toggle, persisted in localStorage
 
 ## Architecture
 
-The system has four layers that all share a single SQLite database:
+Four layers sharing a single SQLite database:
 
 ```
 React Frontend (Vercel)
@@ -65,14 +42,15 @@ SQLite Database
 C++ CLI (local)
 ```
 
-| Layer | Tech | Role |
-|-------|------|------|
-| **Frontend** | React 19, Recharts, Axios, jsPDF | Dashboard UI, charts, PDF export |
-| **API** | Python, Flask, flask-cors | REST endpoints, validation, CORS |
+| Layer | Tech | What it does |
+|-------|------|--------------|
+| **Frontend** | React 19, Recharts, Axios, jsPDF | Dashboard, charts, PDF export |
+| **API** | Python, Flask, flask-cors | REST endpoints, input validation |
 | **Core** | C++11, CMake, SQLite3 | CLI interface, direct DB operations |
-| **ML** | scikit-learn, Pandas, NumPy | Stockout prediction with risk levels |
+| **ML** | scikit-learn, Pandas, NumPy | Stockout predictions with risk levels |
 
-## API Endpoints
+<details>
+<summary><strong>API Endpoints</strong></summary>
 
 ### Medications
 
@@ -83,22 +61,22 @@ C++ CLI (local)
 | POST | `/api/medications` | Add a new medication |
 | PUT | `/api/medications/:id` | Update a medication |
 | DELETE | `/api/medications/:id` | Delete a medication |
-| GET | `/api/medications/low-stock` | Get medications with low quantity |
-| GET | `/api/medications/expired` | Get expired medications |
+| GET | `/api/medications/low-stock` | Low quantity medications |
+| GET | `/api/medications/expired` | Expired medications |
 
 ### Predictions
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/predictions` | Get stockout predictions for all medications |
-| GET | `/api/predictions/:id` | Get prediction for a single medication |
+| GET | `/api/predictions` | Stockout predictions for all medications |
+| GET | `/api/predictions/:id` | Prediction for a single medication |
 
 ### Shipments
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/shipments` | List all shipments |
-| GET | `/api/shipments/next-id` | Get next available shipment ID |
+| GET | `/api/shipments/next-id` | Next available shipment ID |
 | POST | `/api/shipments` | Receive a new shipment |
 
 ### Orders
@@ -106,7 +84,7 @@ C++ CLI (local)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/orders` | List all orders |
-| GET | `/api/orders/suggestions` | Get auto-generated reorder suggestions |
+| GET | `/api/orders/suggestions` | Auto-generated reorder suggestions |
 | POST | `/api/orders` | Place a new order |
 | PUT | `/api/orders/:order_id/status` | Update order status |
 
@@ -116,9 +94,9 @@ C++ CLI (local)
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
 
-## Local Development
+</details>
 
-If you want to run PharmTrack locally, here's how to set up each component.
+## Local Development
 
 ### Prerequisites
 
@@ -126,7 +104,7 @@ If you want to run PharmTrack locally, here's how to set up each component.
 - Python 3.10+
 - Node.js 18+
 
-### 1. C++ CLI
+### C++ CLI
 
 ```bash
 cd build
@@ -136,9 +114,9 @@ cmake --build .
 ./PharmacyInventory.exe      # Windows
 ```
 
-This creates the SQLite database at `build/pharmacy_inventory.db` on first run.
+Creates the SQLite database at `build/pharmacy_inventory.db` on first run.
 
-### 2. Flask API
+### Flask API
 
 ```bash
 cd api
@@ -148,9 +126,9 @@ pip install flask flask-cors scikit-learn pandas numpy
 python app.py
 ```
 
-Runs on `http://127.0.0.1:5000`. The API seeds sample medications on first startup if the database is empty.
+Runs on `http://127.0.0.1:5000`. Seeds sample medications on first startup if the database is empty.
 
-### 3. React Frontend
+### React Frontend
 
 ```bash
 cd frontend
@@ -158,7 +136,7 @@ npm install
 npm start
 ```
 
-Opens at `http://localhost:3000`. Set `REACT_APP_API_URL` to point to a different API server, or it defaults to `http://127.0.0.1:5000/api`.
+Opens at `http://localhost:3000`. Set `REACT_APP_API_URL` to override the default API endpoint (`http://127.0.0.1:5000/api`).
 
 ## About
 
