@@ -25,7 +25,7 @@ def validate_medication_name(name):
 app = Flask(__name__)
 CORS(app)
 
-DB_PATH = os.path.join('..', 'build', 'pharmacy_inventory.db')
+DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(__file__), 'pharmacy_inventory.db'))
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -34,6 +34,13 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
+    conn.execute('''CREATE TABLE IF NOT EXISTS medications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        expiration_date TEXT NOT NULL,
+        price REAL NOT NULL
+    )''')
     conn.execute('''CREATE TABLE IF NOT EXISTS shipments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         shipment_id TEXT NOT NULL UNIQUE,
@@ -73,6 +80,28 @@ def init_db():
         reason TEXT NOT NULL,
         FOREIGN KEY (order_id) REFERENCES orders(order_id)
     )''')
+    # Seed sample medications if the table is empty
+    count = conn.execute('SELECT COUNT(*) FROM medications').fetchone()[0]
+    if count == 0:
+        sample_meds = [
+            ('Amoxicillin 500mg', 150, '2027-03-15', 12.99),
+            ('Lisinopril 10mg', 85, '2027-06-20', 8.50),
+            ('Metformin 850mg', 200, '2027-09-10', 6.75),
+            ('Omeprazole 20mg', 45, '2026-12-01', 15.25),
+            ('Atorvastatin 40mg', 120, '2027-08-05', 22.00),
+            ('Amlodipine 5mg', 30, '2027-01-18', 9.99),
+            ('Metoprolol 50mg', 95, '2027-04-22', 11.50),
+            ('Levothyroxine 75mcg', 60, '2027-07-30', 14.00),
+            ('Albuterol 90mcg', 15, '2026-08-12', 35.99),
+            ('Prednisone 10mg', 5, '2026-05-01', 4.25),
+            ('Gabapentin 300mg', 180, '2027-11-15', 10.50),
+            ('Hydrochlorothiazide 25mg', 70, '2027-02-28', 7.25),
+        ]
+        conn.executemany(
+            'INSERT INTO medications (name, quantity, expiration_date, price) VALUES (?, ?, ?, ?)',
+            sample_meds
+        )
+
     conn.commit()
     conn.close()
 
@@ -524,4 +553,5 @@ def health_check():
     return jsonify({'status': 'healthy', 'message': 'Pharmacy API is running'}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)

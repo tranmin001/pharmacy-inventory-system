@@ -6,7 +6,7 @@ import autoTable from 'jspdf-autotable';
 import './App.css';
 import LandingPage from './LandingPage/LandingPage';
 
-const API_URL = 'http://127.0.0.1:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000/api';
 const STRENGTH_REGEX = /\d+\s*(?:mg|ml|mcg|g|ug|%|iu|meq|units?|caps?|tabs?|mg\/ml|mg\/5ml|mcg\/ml)/i;
 
 function App() {
