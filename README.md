@@ -9,24 +9,42 @@ A full-stack pharmacy inventory management system with ML-powered stockout predi
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.6-F7931E?logo=scikitlearn&logoColor=white)
 
-<!-- Screenshots — replace these with actual screenshots -->
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="80%" />
-</p>
-<p align="center"><em>Screenshots coming soon</em></p>
+## Live Demo
+
+**[pharmacy-inventory-system-three.vercel.app](https://pharmacy-inventory-system-three.vercel.app)**
+
+| Service | Platform | URL |
+|---------|----------|-----|
+| Frontend | Vercel | [pharmacy-inventory-system-three.vercel.app](https://pharmacy-inventory-system-three.vercel.app) |
+| API | Railway | [pharmacy-inventory-system-production.up.railway.app](https://pharmacy-inventory-system-production.up.railway.app) |
+
+---
+
+## Screenshots
+
+<!-- Replace these with actual screenshots -->
+| Dashboard | Stockout Predictions |
+|-----------|---------------------|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Predictions](docs/screenshots/predictions.png) |
+
+| Shipment Receiving | Reorder System |
+|-------------------|----------------|
+| ![Shipments](docs/screenshots/shipments.png) | ![Reorder](docs/screenshots/reorder.png) |
+
+*Screenshots coming soon*
 
 ---
 
 ## Features
 
-- **Medication CRUD** — Add, edit, delete, and search medications with validation for name, quantity, price, and expiration
-- **Stockout Predictions** — ML model (LinearRegression) analyzes usage patterns and flags medications at critical, high, or medium risk
-- **Batch Shipment Receiving** — Receive multi-item shipments with automatic inventory updates and shipment history tracking
-- **Reorder Suggestions** — Auto-generated reorder list based on stock levels, with one-click order placement
-- **Order Tracking** — Track order status from pending through delivery
-- **Charts & Visualizations** — Interactive bar charts for inventory levels and prediction risk distribution
-- **PDF Export** — Generate PDF reports for inventory lists, reorder suggestions, and shipment records
-- **Advanced Filtering** — Filter by stock status (low/expired/expiring), search by name, sort by any column
+- **Full CRUD Inventory Management** — Add, edit, delete medications with validation for name, strength, quantity, price, and expiration date
+- **Real-Time Search** — Instantly filter medications by name as you type
+- **ML-Powered Stockout Predictions** — scikit-learn LinearRegression model analyzes usage patterns and flags medications at critical, high, or medium risk of running out
+- **Bulk Shipment Receiving** — Receive multi-item shipments in one form, with automatic inventory updates and full shipment history
+- **Automated Reorder System** — Auto-generated reorder suggestions based on stock levels, with one-click order placement and status tracking
+- **Data Visualization** — Interactive Recharts bar charts for inventory levels and prediction risk distribution
+- **PDF Export** — Generate downloadable PDF reports for inventory lists, reorder suggestions, and shipment records
+- **Advanced Filtering** — Filter by stock status (low stock, expired, expiring soon), sort by any column
 - **Dark Mode** — Toggle between light and dark themes, persisted in localStorage
 - **Landing Page** — Portfolio-style landing page with scroll animations and project overview
 
@@ -35,16 +53,16 @@ A full-stack pharmacy inventory management system with ML-powered stockout predi
 The system has four layers that all share a single SQLite database:
 
 ```
-React Frontend (port 3000)
+React Frontend (Vercel)
     |  Axios HTTP
     v
-Flask REST API (port 5000)  <-->  ML Predictor (scikit-learn)
+Flask REST API (Railway)  <-->  ML Predictor (scikit-learn)
     |  sqlite3
     v
-SQLite Database (build/pharmacy_inventory.db)
+SQLite Database
     ^  sqlite3
     |
-C++ CLI (build/PharmacyInventory.exe)
+C++ CLI (local)
 ```
 
 | Layer | Tech | Role |
@@ -53,48 +71,6 @@ C++ CLI (build/PharmacyInventory.exe)
 | **API** | Python, Flask, flask-cors | REST endpoints, validation, CORS |
 | **Core** | C++11, CMake, SQLite3 | CLI interface, direct DB operations |
 | **ML** | scikit-learn, Pandas, NumPy | Stockout prediction with risk levels |
-
-## Setup
-
-### Prerequisites
-
-- CMake 3.10+ and a C++11 compiler
-- Python 3.10+
-- Node.js 18+
-
-### 1. C++ CLI
-
-```bash
-cd build
-cmake ..
-cmake --build .
-./PharmacyInventory          # Linux/Mac
-./PharmacyInventory.exe      # Windows
-```
-
-This creates the SQLite database at `build/pharmacy_inventory.db` on first run.
-
-### 2. Flask API
-
-```bash
-cd api
-python -m venv venv
-source venv/bin/activate     # Windows: venv\Scripts\activate
-pip install flask flask-cors scikit-learn pandas numpy
-python app.py
-```
-
-Runs on `http://127.0.0.1:5000`. Connects to `../build/pharmacy_inventory.db`.
-
-### 3. React Frontend
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-Opens at `http://localhost:3000`. Make sure the Flask API is running first so the dashboard can load data.
 
 ## API Endpoints
 
@@ -139,6 +115,50 @@ Opens at `http://localhost:3000`. Make sure the Flask API is running first so th
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
+
+## Local Development
+
+If you want to run PharmTrack locally, here's how to set up each component.
+
+### Prerequisites
+
+- CMake 3.10+ and a C++11 compiler
+- Python 3.10+
+- Node.js 18+
+
+### 1. C++ CLI
+
+```bash
+cd build
+cmake ..
+cmake --build .
+./PharmacyInventory          # Linux/Mac
+./PharmacyInventory.exe      # Windows
+```
+
+This creates the SQLite database at `build/pharmacy_inventory.db` on first run.
+
+### 2. Flask API
+
+```bash
+cd api
+python -m venv venv
+source venv/bin/activate     # Windows: venv\Scripts\activate
+pip install flask flask-cors scikit-learn pandas numpy
+python app.py
+```
+
+Runs on `http://127.0.0.1:5000`. The API seeds sample medications on first startup if the database is empty.
+
+### 3. React Frontend
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Opens at `http://localhost:3000`. Set `REACT_APP_API_URL` to point to a different API server, or it defaults to `http://127.0.0.1:5000/api`.
 
 ## About
 
