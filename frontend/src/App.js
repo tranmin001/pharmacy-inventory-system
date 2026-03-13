@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
@@ -23,8 +23,9 @@ function App() {
   const [sortDirection, setSortDirection] = useState('asc');
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [toasts, setToasts] = useState([]);
+  const searchRef = useRef(null);
+  const toastIdRef = useRef(0);
   const [formData, setFormData] = useState({
     name: '',
     quantity: '',
@@ -54,20 +55,24 @@ function App() {
   const [priceMax, setPriceMax] = useState('');
   const [shipmentHistory, setShipmentHistory] = useState([]);
 
+  const addToast = useCallback((message, type = 'success') => {
+    const id = ++toastIdRef.current;
+    setToasts(prev => [...prev, { id, message, type, exiting: false }]);
+    setTimeout(() => {
+      setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, 300);
+    }, 4000);
+  }, []);
+
+  const setError = useCallback((msg) => { if (msg) addToast(msg, 'error'); }, [addToast]);
+  const setSuccess = useCallback((msg) => { if (msg) addToast(msg, 'success'); }, [addToast]);
+
   useEffect(() => {
     fetchMedications();
     fetchPredictions();
   }, []);
-
-  useEffect(() => {
-    if (error || success) {
-      const timer = setTimeout(() => {
-        setError('');
-        setSuccess('');
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error, success]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -78,6 +83,44 @@ function App() {
     if (activePanel === 'orders') fetchOrders();
     if (activePanel === 'shipments') fetchShipmentHistory();
   }, [activePanel]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (showLanding || showShipmentModal || showReorderModal) return;
+      const tag = e.target.tagName;
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+      if (e.key === 'Escape') {
+        if (showForm) {
+          setShowForm(false);
+          setEditingId(null);
+          setFormData({ name: '', quantity: '', expiration_date: '', price: '' });
+        }
+        setShowExportMenu(false);
+        return;
+      }
+
+      if (isInput) return;
+
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setActivePanel('inventory');
+        setShowForm(true);
+        setEditingId(null);
+        setFormData({ name: '', quantity: '', expiration_date: '', price: '' });
+        return;
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        setActivePanel('inventory');
+        searchRef.current?.focus();
+        return;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showLanding, showForm, showShipmentModal, showReorderModal]);
 
   const fetchMedications = async () => {
     try {
@@ -697,7 +740,21 @@ function App() {
   };
 
   if (loading) {
-    return <div className="loading">Loading inventory...</div>;
+    return (
+      <div className="skeleton-wrapper">
+        <div className="skeleton-header">
+          <div className="skeleton-line skeleton-title" />
+          <div className="skeleton-line skeleton-subtitle" />
+        </div>
+        <div className="skeleton-stats">
+          {[1,2,3,4].map(i => <div key={i} className="skeleton-stat" />)}
+        </div>
+        <div className="skeleton-table">
+          <div className="skeleton-line skeleton-row-header" />
+          {[1,2,3,4,5,6].map(i => <div key={i} className="skeleton-line skeleton-row" />)}
+        </div>
+      </div>
+    );
   }
 
   if (showLanding) {
@@ -796,8 +853,6 @@ function App() {
         </aside>
 
         <main className="main">
-          {error && <div className="alert alert-error">{error}</div>}
-          {success && <div className="alert alert-success">{success}</div>}
 
           <div className="stats-bar">
             <button className="stat" onClick={() => handleStatClick('all')}>
@@ -862,9 +917,10 @@ function App() {
                   </div>
                 </div>
                 <input
+                  ref={searchRef}
                   type="text"
                   className="search-input"
-                  placeholder="Search medications..."
+                  placeholder="Search medications... ( / )"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -917,61 +973,65 @@ function App() {
                 </div>
               )}
 
-              {showForm && (
-                <div className="form-card">
+              <div className={`slide-panel${showForm ? ' slide-panel-open' : ''}`}>
+                <div className="slide-panel-header">
                   <h2>{editingId ? 'Edit Medication' : 'Add New Medication'}</h2>
-                  <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                      <label>Medication Name & Strength *</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., Amoxicillin 500mg"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        maxLength={100}
-                      />
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Quantity * (1-1000)</label>
-                        <input
-                          type="number"
-                          placeholder="0"
-                          min="1"
-                          max="1000"
-                          value={formData.quantity}
-                          onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Price * ($0.01 - $10,000)</label>
-                        <input
-                          type="number"
-                          placeholder="0.00"
-                          step="0.01"
-                          min="0.01"
-                          max="10000"
-                          value={formData.price}
-                          onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label>Expiration Date * (must be within 5 years)</label>
-                      <input
-                        type="date"
-                        min={editingId ? undefined : getMinDate()}
-                        max={getMaxDate()}
-                        value={formData.expiration_date}
-                        onChange={(e) => setFormData({...formData, expiration_date: e.target.value})}
-                      />
-                    </div>
-                    <button type="submit" className="btn btn-primary btn-block">
-                      {editingId ? 'Update Medication' : 'Add to Inventory'}
-                    </button>
-                  </form>
+                  <button className="modal-close" onClick={() => {
+                    setShowForm(false);
+                    setEditingId(null);
+                    setFormData({ name: '', quantity: '', expiration_date: '', price: '' });
+                  }}>X</button>
                 </div>
-              )}
+                <form onSubmit={handleSubmit}>
+                  <div className="form-group">
+                    <label>Medication Name & Strength *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Amoxicillin 500mg"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      maxLength={100}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Quantity * (1-1000)</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      min="1"
+                      max="1000"
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Price * ($0.01 - $10,000)</label>
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0.01"
+                      max="10000"
+                      value={formData.price}
+                      onChange={(e) => setFormData({...formData, price: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Expiration Date * (must be within 5 years)</label>
+                    <input
+                      type="date"
+                      min={editingId ? undefined : getMinDate()}
+                      max={getMaxDate()}
+                      value={formData.expiration_date}
+                      onChange={(e) => setFormData({...formData, expiration_date: e.target.value})}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary btn-block">
+                    {editingId ? 'Update Medication' : 'Add to Inventory'}
+                  </button>
+                </form>
+                <div className="slide-panel-hint">Press Esc to close</div>
+              </div>
 
               {medications.length === 0 ? (
                 <div className="empty-state">
@@ -1507,6 +1567,15 @@ function App() {
       <footer className="footer">
         <p>PharmTrack v1.0 - Built for Safeway Pharmacy workflow optimization</p>
       </footer>
+
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`toast toast-${toast.type}${toast.exiting ? ' toast-exit' : ''}`}>
+            <span className="toast-message">{toast.message}</span>
+            <button className="toast-close" onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}>X</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
