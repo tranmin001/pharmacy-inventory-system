@@ -29,7 +29,12 @@
   --lp-about-bg: #F8FAFC;
 }
 
-/* ── Reset for landing page ── */
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reset for landing page */
 .lp-page {
   font-family: 'Manrope', sans-serif;
   color: var(--lp-text-light);
@@ -914,5 +919,73 @@
   .lp-footer-links {
     flex-direction: column;
     gap: 32px;
+  }
+}
+
+/* ==============================
+   ACCESSIBILITY
+   ============================== */
+
+/* Keyboard focus outlines */
+.lp-nav-link:focus-visible,
+.lp-nav-cta:focus-visible,
+.lp-nav-brand:focus-visible,
+.lp-cta:focus-visible,
+.lp-link:focus-visible,
+.lp-footer-col a:focus-visible,
+.lp-footer-dashboard-link:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* Skip link for keyboard users */
+.lp-skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 200;
+  padding: 10px 20px;
+  background: var(--lp-accent);
+  color: var(--lp-white);
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 6px 6px;
+  transition: top 0.2s;
+}
+
+.lp-skip-link:focus {
+  top: 0;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .lp-transition,
+  .lp-reveal,
+  .lp-feature-card,
+  .lp-usecase,
+  .lp-cta,
+  .lp-nav-cta,
+  .lp-cta-arrow,
+  .lp-nav,
+  .lp-nav-brand {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .lp-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .lp-accent-bar {
+    width: 60px !important;
+    animation: none !important;
   }
 }

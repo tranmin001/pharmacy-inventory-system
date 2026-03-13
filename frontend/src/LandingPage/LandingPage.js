@@ -145,11 +145,13 @@ export default function LandingPage({ onEnterApp }) {
 
   return (
     <div className="lp-page">
+      <a className="lp-skip-link" href="#features">Skip to content</a>
+
       {/* Nav */}
-      <nav className={`lp-nav${navScrolled ? ' lp-nav-scrolled' : ''}`}>
+      <nav className={`lp-nav${navScrolled ? ' lp-nav-scrolled' : ''}`} aria-label="Main navigation">
         <div className="lp-nav-inner">
-          <a className="lp-nav-brand" href="#hero">PharmTrack</a>
-          <div className="lp-nav-links">
+          <a className="lp-nav-brand" href="#hero" aria-label="Back to top">PharmTrack</a>
+          <div className="lp-nav-links" role="list">
             {NAV_LINKS.map((link) => (
               <a key={link.href} className="lp-nav-link" href={link.href}>
                 {link.label}
@@ -163,9 +165,9 @@ export default function LandingPage({ onEnterApp }) {
       </nav>
 
       {/* Hero */}
-      <section className="lp-hero" id="hero">
+      <section className="lp-hero" id="hero" aria-label="Introduction">
         <div className="lp-hero-inner">
-          <span className="lp-accent-bar lp-reveal lp-stagger-1 lp-visible" />
+          <span className="lp-accent-bar lp-reveal lp-stagger-1 lp-visible" aria-hidden="true" />
           <h1 className="lp-hero-headline lp-reveal lp-stagger-2 lp-visible">
             Pharmacy inventory,{' '}
             <span style={{ color: 'var(--lp-accent)' }}>built by a pharmacy tech</span>
@@ -185,7 +187,7 @@ export default function LandingPage({ onEnterApp }) {
       <StatsBar stats={stats} />
 
       {/* Features */}
-      <section className="lp-features" id="features">
+      <section className="lp-features" id="features" aria-label="Features">
         <p className="lp-section-label lp-reveal">Features</p>
         <h2 className="lp-section-title lp-reveal">What it does</h2>
         <div className="lp-features-grid">
@@ -199,11 +201,11 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* Dashboard Preview */}
-      <section className="lp-preview" id="preview">
+      <section className="lp-preview" id="preview" aria-label="Dashboard preview">
         <p className="lp-section-label lp-reveal">Preview</p>
         <h2 className="lp-section-title lp-reveal">See it in action</h2>
         <div className="lp-browser-frame lp-reveal">
-          <div className="lp-browser-bar">
+          <div className="lp-browser-bar" aria-hidden="true">
             <span className="lp-browser-dot" />
             <span className="lp-browser-dot" />
             <span className="lp-browser-dot" />
@@ -231,7 +233,7 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* Tech Stack */}
-      <section className="lp-tech" id="architecture">
+      <section className="lp-tech" id="architecture" aria-label="Architecture">
         <p className="lp-section-label lp-reveal">Architecture</p>
         <h2 className="lp-section-title lp-reveal">How it's built</h2>
         <div className="lp-tech-grid">
@@ -249,7 +251,7 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* Use Cases */}
-      <section className="lp-usecases" id="usecases">
+      <section className="lp-usecases" id="usecases" aria-label="Use cases">
         <p className="lp-section-label lp-reveal">Real-world scenarios</p>
         <h2 className="lp-section-title lp-reveal">Problems it solves</h2>
         <div className="lp-usecases-list">
@@ -272,7 +274,7 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* About */}
-      <section className="lp-about" id="about">
+      <section className="lp-about" id="about" aria-label="About the project">
         <p className="lp-section-label lp-reveal">About</p>
         <h2 className="lp-section-title lp-reveal">Project context</h2>
         <p className="lp-about-text lp-reveal">
@@ -303,7 +305,7 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* Footer */}
-      <footer className="lp-footer">
+      <footer className="lp-footer" aria-label="Site footer">
         <div className="lp-footer-inner">
           <div className="lp-footer-brand">
             <span className="lp-footer-logo">PharmTrack</span>
@@ -353,7 +355,7 @@ function StatItem({ label, value }) {
 
 function StatsBar({ stats }) {
   return (
-    <section className="lp-stats">
+    <section className="lp-stats" aria-label="Live inventory statistics">
       <StatItem label="Medications tracked" value={stats.medications} />
       <StatItem label="Stockout predictions" value={stats.predictions} />
       <StatItem label="Low stock alerts" value={stats.lowStock} />
