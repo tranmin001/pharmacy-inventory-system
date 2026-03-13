@@ -1,10 +1,18 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './App.css';
 import LandingPage from './LandingPage/LandingPage';
+import Sidebar from './components/Sidebar';
+import StatsBar from './components/StatsBar';
+import MedicationTable from './components/MedicationTable';
+import PredictionsPanel from './components/PredictionsPanel';
+import OrdersPanel from './components/OrdersPanel';
+import ShipmentsPanel from './components/ShipmentsPanel';
+import ToastContainer from './components/ToastContainer';
+
+const AnalyticsPanel = lazy(() => import('./components/AnalyticsPanel'));
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000/api';
 const STRENGTH_REGEX = /\d+\s*(?:mg|ml|mcg|g|ug|%|iu|meq|units?|caps?|tabs?|mg\/ml|mg\/5ml|mcg\/ml)/i;
@@ -55,6 +63,7 @@ function App() {
   const [priceMax, setPriceMax] = useState('');
   const [shipmentHistory, setShipmentHistory] = useState([]);
 
+  // --- Toast helpers ---
   const addToast = useCallback((message, type = 'success') => {
     const id = ++toastIdRef.current;
     setToasts(prev => [...prev, { id, message, type, exiting: false }]);
@@ -69,6 +78,11 @@ function App() {
   const setError = useCallback((msg) => { if (msg) addToast(msg, 'error'); }, [addToast]);
   const setSuccess = useCallback((msg) => { if (msg) addToast(msg, 'success'); }, [addToast]);
 
+  const dismissToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // --- Data fetching ---
   useEffect(() => {
     fetchMedications();
     fetchPredictions();
@@ -86,6 +100,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePanel]);
 
+  // --- Keyboard shortcuts ---
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (showLanding || showShipmentModal || showReorderModal) return;
@@ -145,46 +160,52 @@ function App() {
     }
   };
 
+  const fetchOrders = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/orders`);
+      setOrders(response.data);
+    } catch (err) {
+      console.error('Failed to load orders');
+    }
+  };
+
+  const fetchShipmentHistory = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/shipments`);
+      setShipmentHistory(response.data);
+    } catch (err) {
+      console.error('Failed to load shipment history');
+    }
+  };
+
+  // --- Status helpers ---
+  const isExpired = (date) => new Date(date) < new Date();
+  const isLowStock = (quantity) => quantity < 10;
+  const isExpiringSoon = (date) => {
+    const expDate = new Date(date);
+    const today = new Date();
+    const thirtyDays = new Date();
+    thirtyDays.setDate(thirtyDays.getDate() + 30);
+    return expDate > today && expDate <= thirtyDays;
+  };
+
+  // --- Form validation & handlers ---
   const validateForm = () => {
-    if (!formData.name.trim()) {
-      setError('Medication name is required');
-      return false;
-    }
-    if (formData.name.length > 100) {
-      setError('Medication name too long (max 100 characters)');
-      return false;
-    }
-    if (!STRENGTH_REGEX.test(formData.name)) {
-      setError('Medication name must include a strength (e.g. "Amoxicillin 500mg"). Include the dosage/concentration.');
-      return false;
-    }
+    if (!formData.name.trim()) { setError('Medication name is required'); return false; }
+    if (formData.name.length > 100) { setError('Medication name too long (max 100 characters)'); return false; }
+    if (!STRENGTH_REGEX.test(formData.name)) { setError('Medication name must include a strength (e.g. "Amoxicillin 500mg"). Include the dosage/concentration.'); return false; }
     const qty = parseInt(formData.quantity);
-    if (isNaN(qty) || qty < 1 || qty > 1000) {
-      setError('Quantity must be between 1 and 1000');
-      return false;
-    }
+    if (isNaN(qty) || qty < 1 || qty > 1000) { setError('Quantity must be between 1 and 1000'); return false; }
     const price = parseFloat(formData.price);
-    if (isNaN(price) || price < 0.01 || price > 10000) {
-      setError('Price must be between $0.01 and $10,000');
-      return false;
-    }
-    if (!formData.expiration_date) {
-      setError('Expiration date is required');
-      return false;
-    }
+    if (isNaN(price) || price < 0.01 || price > 10000) { setError('Price must be between $0.01 and $10,000'); return false; }
+    if (!formData.expiration_date) { setError('Expiration date is required'); return false; }
     const expDate = new Date(formData.expiration_date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (expDate <= today && !editingId) {
-      setError('Cannot add expired medication. Expiration date must be in the future.');
-      return false;
-    }
+    if (expDate <= today && !editingId) { setError('Cannot add expired medication. Expiration date must be in the future.'); return false; }
     const maxDate = new Date();
     maxDate.setFullYear(maxDate.getFullYear() + 5);
-    if (expDate > maxDate && !editingId) {
-      setError('Expiration date too far in future (max 5 years). Please verify.');
-      return false;
-    }
+    if (expDate > maxDate && !editingId) { setError('Expiration date too far in future (max 5 years). Please verify.'); return false; }
     return true;
   };
 
@@ -235,6 +256,7 @@ function App() {
     }
   };
 
+  // --- Shipment handlers ---
   const openShipmentModal = async () => {
     try {
       const response = await axios.get(`${API_URL}/shipments/next-id`);
@@ -273,54 +295,23 @@ function App() {
   };
 
   const validateShipment = () => {
-    if (!shipmentData.supplier_name.trim()) {
-      setError('Supplier name is required');
-      return false;
-    }
-    if (shipmentData.supplier_name.length > 200) {
-      setError('Supplier name too long (max 200 characters)');
-      return false;
-    }
-    if (!shipmentData.date_received) {
-      setError('Date received is required');
-      return false;
-    }
+    if (!shipmentData.supplier_name.trim()) { setError('Supplier name is required'); return false; }
+    if (shipmentData.supplier_name.length > 200) { setError('Supplier name too long (max 200 characters)'); return false; }
+    if (!shipmentData.date_received) { setError('Date received is required'); return false; }
     const recvDate = new Date(shipmentData.date_received);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (recvDate > today) {
-      setError('Date received cannot be in the future');
-      return false;
-    }
+    if (recvDate > today) { setError('Date received cannot be in the future'); return false; }
     for (let i = 0; i < shipmentData.items.length; i++) {
       const item = shipmentData.items[i];
-      if (!item.medication_name.trim()) {
-        setError(`Item ${i + 1}: Medication name is required`);
-        return false;
-      }
-      if (!STRENGTH_REGEX.test(item.medication_name)) {
-        setError(`Item ${i + 1}: Medication name must include a strength (e.g. "Amoxicillin 500mg")`);
-        return false;
-      }
+      if (!item.medication_name.trim()) { setError(`Item ${i + 1}: Medication name is required`); return false; }
+      if (!STRENGTH_REGEX.test(item.medication_name)) { setError(`Item ${i + 1}: Medication name must include a strength (e.g. "Amoxicillin 500mg")`); return false; }
       const qty = parseInt(item.quantity);
-      if (isNaN(qty) || qty < 1 || qty > 1000) {
-        setError(`Item ${i + 1}: Quantity must be between 1 and 1000`);
-        return false;
-      }
+      if (isNaN(qty) || qty < 1 || qty > 1000) { setError(`Item ${i + 1}: Quantity must be between 1 and 1000`); return false; }
       const price = parseFloat(item.price);
-      if (isNaN(price) || price < 0.01 || price > 10000) {
-        setError(`Item ${i + 1}: Price must be between $0.01 and $10,000`);
-        return false;
-      }
-      if (!item.expiration_date) {
-        setError(`Item ${i + 1}: Expiration date is required`);
-        return false;
-      }
-      const expDate = new Date(item.expiration_date);
-      if (expDate <= new Date()) {
-        setError(`Item ${i + 1}: Expiration date must be in the future`);
-        return false;
-      }
+      if (isNaN(price) || price < 0.01 || price > 10000) { setError(`Item ${i + 1}: Price must be between $0.01 and $10,000`); return false; }
+      if (!item.expiration_date) { setError(`Item ${i + 1}: Expiration date is required`); return false; }
+      if (new Date(item.expiration_date) <= new Date()) { setError(`Item ${i + 1}: Expiration date must be in the future`); return false; }
     }
     return true;
   };
@@ -334,7 +325,7 @@ function App() {
       const result = response.data;
       const created = result.items.filter(i => i.action === 'created').length;
       const restocked = result.items.filter(i => i.action === 'restocked').length;
-      let msg = `Shipment ${result.shipment_id} received — ${result.total_items} units ($${result.total_value.toFixed(2)})`;
+      let msg = `Shipment ${result.shipment_id} received - ${result.total_items} units ($${result.total_value.toFixed(2)})`;
       if (restocked > 0) msg += `, ${restocked} restocked`;
       if (created > 0) msg += `, ${created} new`;
       setSuccess(msg);
@@ -349,6 +340,7 @@ function App() {
     }
   };
 
+  // --- Reorder handlers ---
   const openReorderModal = async () => {
     setReorderLoading(true);
     setError('');
@@ -403,10 +395,7 @@ function App() {
         order_quantity: parseInt(reorderSelected[s.medication_id]?.order_quantity) || s.suggested_quantity,
         reason: s.reasons.join(', ')
       }));
-    if (selectedItems.length === 0) {
-      setError('Select at least one item to reorder');
-      return;
-    }
+    if (selectedItems.length === 0) { setError('Select at least one item to reorder'); return; }
     for (let i = 0; i < selectedItems.length; i++) {
       if (selectedItems[i].order_quantity < 1 || selectedItems[i].order_quantity > 1000) {
         setError(`${selectedItems[i].medication_name}: Order quantity must be between 1 and 1000`);
@@ -415,10 +404,7 @@ function App() {
     }
     setReorderLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/orders`, {
-        items: selectedItems,
-        notes: reorderNotes
-      });
+      const response = await axios.post(`${API_URL}/orders`, { items: selectedItems, notes: reorderNotes });
       setSuccess(`Reorder ${response.data.order_id} created with ${selectedItems.length} items`);
       setShowReorderModal(false);
       fetchOrders();
@@ -426,24 +412,6 @@ function App() {
       setError(err.response?.data?.error || 'Failed to create reorder');
     } finally {
       setReorderLoading(false);
-    }
-  };
-
-  const fetchOrders = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/orders`);
-      setOrders(response.data);
-    } catch (err) {
-      console.error('Failed to load orders');
-    }
-  };
-
-  const fetchShipmentHistory = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/shipments`);
-      setShipmentHistory(response.data);
-    } catch (err) {
-      console.error('Failed to load shipment history');
     }
   };
 
@@ -457,17 +425,17 @@ function App() {
     }
   };
 
+  // --- PDF exports ---
   const exportInventoryPDF = () => {
     const doc = new jsPDF();
     const today = new Date().toLocaleDateString();
     doc.setFontSize(18);
     doc.setTextColor(15, 23, 42);
-    doc.text('PharmTrack — Inventory Report', 14, 22);
+    doc.text('PharmTrack - Inventory Report', 14, 22);
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated: ${today}`, 14, 30);
     doc.text(`Total Items: ${medications.length}`, 14, 36);
-
     const getStatus = (med) => {
       const parts = [];
       if (new Date(med.expiration_date) < new Date()) parts.push('Expired');
@@ -475,18 +443,10 @@ function App() {
       if (med.quantity < 10) parts.push('Low Stock');
       return parts.length ? parts.join(', ') : 'OK';
     };
-
     autoTable(doc, {
       startY: 42,
       head: [['ID', 'Medication', 'Qty', 'Expiration', 'Price', 'Status']],
-      body: medications.map(m => [
-        m.id,
-        m.name,
-        m.quantity,
-        m.expiration_date,
-        `$${parseFloat(m.price).toFixed(2)}`,
-        getStatus(m)
-      ]),
+      body: medications.map(m => [m.id, m.name, m.quantity, m.expiration_date, `$${parseFloat(m.price).toFixed(2)}`, getStatus(m)]),
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [13, 148, 136], textColor: 255 },
       alternateRowStyles: { fillColor: [248, 250, 251] },
@@ -499,29 +459,20 @@ function App() {
     try {
       const response = await axios.get(`${API_URL}/orders/suggestions`);
       const suggestions = response.data;
-      if (suggestions.length === 0) {
-        setError('No items need reordering — nothing to export');
-        return;
-      }
+      if (suggestions.length === 0) { setError('No items need reordering - nothing to export'); return; }
       const doc = new jsPDF();
       const today = new Date().toLocaleDateString();
       doc.setFontSize(18);
       doc.setTextColor(15, 23, 42);
-      doc.text('PharmTrack — Reorder List', 14, 22);
+      doc.text('PharmTrack - Reorder List', 14, 22);
       doc.setFontSize(10);
       doc.setTextColor(100);
       doc.text(`Generated: ${today}`, 14, 30);
       doc.text(`Items to reorder: ${suggestions.length}`, 14, 36);
-
       autoTable(doc, {
         startY: 42,
         head: [['Medication', 'Current Qty', 'Suggested Order', 'Reason']],
-        body: suggestions.map(s => [
-          s.medication_name,
-          s.current_quantity,
-          s.suggested_quantity,
-          s.reasons.join(', ')
-        ]),
+        body: suggestions.map(s => [s.medication_name, s.current_quantity, s.suggested_quantity, s.reasons.join(', ')]),
         styles: { fontSize: 9, cellPadding: 3 },
         headStyles: { fillColor: [217, 119, 6], textColor: 255 },
         alternateRowStyles: { fillColor: [255, 251, 235] },
@@ -537,45 +488,31 @@ function App() {
     try {
       const response = await axios.get(`${API_URL}/shipments`);
       const shipments = response.data;
-      if (shipments.length === 0) {
-        setError('No shipment history to export');
-        return;
-      }
+      if (shipments.length === 0) { setError('No shipment history to export'); return; }
       const doc = new jsPDF();
       const today = new Date().toLocaleDateString();
       doc.setFontSize(18);
       doc.setTextColor(15, 23, 42);
-      doc.text('PharmTrack — Shipment History', 14, 22);
+      doc.text('PharmTrack - Shipment History', 14, 22);
       doc.setFontSize(10);
       doc.setTextColor(100);
       doc.text(`Generated: ${today}`, 14, 30);
       doc.text(`Total shipments: ${shipments.length}`, 14, 36);
-
       let yPos = 42;
-      shipments.forEach((s, idx) => {
-        if (yPos > 250) {
-          doc.addPage();
-          yPos = 20;
-        }
+      shipments.forEach((s) => {
+        if (yPos > 250) { doc.addPage(); yPos = 20; }
         doc.setFontSize(11);
         doc.setTextColor(15, 23, 42);
-        doc.text(`${s.shipment_id} — ${s.supplier_name} (${s.date_received})`, 14, yPos);
+        doc.text(`${s.shipment_id} - ${s.supplier_name} (${s.date_received})`, 14, yPos);
         yPos += 6;
         doc.setFontSize(9);
         doc.setTextColor(100);
         doc.text(`Items: ${s.total_items} units | Value: $${parseFloat(s.total_value).toFixed(2)}`, 14, yPos);
         yPos += 4;
-
         autoTable(doc, {
           startY: yPos,
           head: [['Medication', 'Qty', 'Expiration', 'Price', 'Action']],
-          body: s.items.map(i => [
-            i.medication_name,
-            i.quantity,
-            i.expiration_date,
-            `$${parseFloat(i.price).toFixed(2)}`,
-            i.action
-          ]),
+          body: s.items.map(i => [i.medication_name, i.quantity, i.expiration_date, `$${parseFloat(i.price).toFixed(2)}`, i.action]),
           styles: { fontSize: 8, cellPadding: 2 },
           headStyles: { fillColor: [13, 148, 136], textColor: 255 },
           alternateRowStyles: { fillColor: [248, 250, 251] },
@@ -590,16 +527,7 @@ function App() {
     }
   };
 
-  const isExpired = (date) => new Date(date) < new Date();
-  const isLowStock = (quantity) => quantity < 10;
-  const isExpiringSoon = (date) => {
-    const expDate = new Date(date);
-    const today = new Date();
-    const thirtyDays = new Date();
-    thirtyDays.setDate(thirtyDays.getDate() + 30);
-    return expDate > today && expDate <= thirtyDays;
-  };
-
+  // --- Filtering & sorting (memoized) ---
   const clearFilters = () => {
     setStatusFilter('all');
     setExpirationFrom('');
@@ -616,7 +544,7 @@ function App() {
 
   const hasActiveFilters = statusFilter !== 'all' || expirationFrom || expirationTo || priceMin || priceMax;
 
-  const getFilteredMedications = () => {
+  const filteredMedications = useMemo(() => {
     return medications.filter(m => {
       if (searchTerm && !m.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       if (statusFilter !== 'all') {
@@ -632,9 +560,7 @@ function App() {
       if (priceMax && price > parseFloat(priceMax)) return false;
       return true;
     });
-  };
-
-  const filteredMedications = getFilteredMedications();
+  }, [medications, searchTerm, statusFilter, expirationFrom, expirationTo, priceMin, priceMax]);
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -645,39 +571,20 @@ function App() {
     }
   };
 
-  const getSortIndicator = (column) => {
-    if (sortColumn !== column) return ' \u2195';
-    return sortDirection === 'asc' ? ' \u2191' : ' \u2193';
-  };
-
-  const sortedMedications = [...filteredMedications].sort((a, b) => {
-    if (!sortColumn) return 0;
-    const dir = sortDirection === 'asc' ? 1 : -1;
-    switch (sortColumn) {
-      case 'id': return (a.id - b.id) * dir;
-      case 'name': return a.name.localeCompare(b.name) * dir;
-      case 'quantity': return (a.quantity - b.quantity) * dir;
-      case 'expiration': return (new Date(a.expiration_date) - new Date(b.expiration_date)) * dir;
-      case 'price': return (parseFloat(a.price) - parseFloat(b.price)) * dir;
-      default: return 0;
-    }
-  });
-
-  const getRowUrgencyClass = (med) => {
-    if (isExpired(med.expiration_date)) return 'row-urgency-expired';
-    if (isLowStock(med.quantity) && isExpiringSoon(med.expiration_date)) return 'row-urgency-expired';
-    if (isLowStock(med.quantity)) return 'row-urgency-low';
-    if (isExpiringSoon(med.expiration_date)) return 'row-urgency-warning';
-    return '';
-  };
-
-  const getQuantityPercent = (quantity) => Math.min((quantity / 100) * 100, 100);
-
-  const getQuantityColor = (quantity) => {
-    if (quantity < 10) return 'var(--danger)';
-    if (quantity < 30) return 'var(--warning)';
-    return 'var(--accent)';
-  };
+  const sortedMedications = useMemo(() => {
+    return [...filteredMedications].sort((a, b) => {
+      if (!sortColumn) return 0;
+      const dir = sortDirection === 'asc' ? 1 : -1;
+      switch (sortColumn) {
+        case 'id': return (a.id - b.id) * dir;
+        case 'name': return a.name.localeCompare(b.name) * dir;
+        case 'quantity': return (a.quantity - b.quantity) * dir;
+        case 'expiration': return (new Date(a.expiration_date) - new Date(b.expiration_date)) * dir;
+        case 'price': return (parseFloat(a.price) - parseFloat(b.price)) * dir;
+        default: return 0;
+      }
+    });
+  }, [filteredMedications, sortColumn, sortDirection]);
 
   const getMinDate = () => {
     const tomorrow = new Date();
@@ -691,57 +598,7 @@ function App() {
     return maxDate.toISOString().split('T')[0];
   };
 
-  const getRiskColor = (risk) => {
-    switch(risk) {
-      case 'CRITICAL': return '#DC2626';
-      case 'HIGH': return '#D97706';
-      case 'MEDIUM': return '#7c3aed';
-      default: return '#0D9488';
-    }
-  };
-
-  const getStockChartData = () => {
-    return [...medications]
-      .sort((a, b) => a.quantity - b.quantity)
-      .slice(0, 15)
-      .map(m => ({
-        name: m.name.length > 18 ? m.name.substring(0, 16) + '...' : m.name,
-        quantity: m.quantity,
-        fill: m.quantity < 10 ? '#DC2626' : m.quantity < 30 ? '#D97706' : '#0D9488'
-      }));
-  };
-
-  const getExpirationData = () => {
-    const today = new Date();
-    return medications
-      .filter(m => {
-        const exp = new Date(m.expiration_date);
-        return exp > today;
-      })
-      .sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date))
-      .slice(0, 15)
-      .map(m => {
-        const exp = new Date(m.expiration_date);
-        const daysLeft = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
-        return {
-          name: m.name.length > 18 ? m.name.substring(0, 16) + '...' : m.name,
-          days: daysLeft,
-          fill: daysLeft <= 7 ? '#DC2626' : daysLeft <= 30 ? '#D97706' : daysLeft <= 90 ? '#7c3aed' : '#0D9488'
-        };
-      });
-  };
-
-  const getValueChartData = () => {
-    return [...medications]
-      .sort((a, b) => (b.quantity * b.price) - (a.quantity * a.price))
-      .slice(0, 15)
-      .map(m => ({
-        name: m.name.length > 18 ? m.name.substring(0, 16) + '...' : m.name,
-        value: parseFloat((m.quantity * m.price).toFixed(2)),
-        fill: '#0D9488'
-      }));
-  };
-
+  // --- Render ---
   if (loading) {
     return (
       <div className="skeleton-wrapper">
@@ -805,76 +662,16 @@ function App() {
       </header>
 
       <div className="dashboard-layout">
-        <aside className="sidebar">
-          <nav className="sidebar-nav">
-            <button
-              className={`sidebar-nav-item${activePanel === 'inventory' ? ' sidebar-nav-active' : ''}`}
-              onClick={() => setActivePanel('inventory')}
-            >
-              <span className="sidebar-nav-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              </span>
-              <span className="sidebar-nav-label">Inventory</span>
-            </button>
-            <button
-              className={`sidebar-nav-item${activePanel === 'charts' ? ' sidebar-nav-active' : ''}`}
-              onClick={() => setActivePanel('charts')}
-            >
-              <span className="sidebar-nav-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              </span>
-              <span className="sidebar-nav-label">Analytics</span>
-            </button>
-            <button
-              className={`sidebar-nav-item${activePanel === 'predictions' ? ' sidebar-nav-active' : ''}`}
-              onClick={() => setActivePanel('predictions')}
-            >
-              <span className="sidebar-nav-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              </span>
-              <span className="sidebar-nav-label">AI Predictions</span>
-            </button>
-            <button
-              className={`sidebar-nav-item${activePanel === 'orders' ? ' sidebar-nav-active' : ''}`}
-              onClick={() => setActivePanel('orders')}
-            >
-              <span className="sidebar-nav-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              </span>
-              <span className="sidebar-nav-label">Orders</span>
-            </button>
-            <button
-              className={`sidebar-nav-item${activePanel === 'shipments' ? ' sidebar-nav-active' : ''}`}
-              onClick={() => setActivePanel('shipments')}
-            >
-              <span className="sidebar-nav-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-              </span>
-              <span className="sidebar-nav-label">Shipments</span>
-            </button>
-          </nav>
-        </aside>
+        <Sidebar activePanel={activePanel} onPanelChange={setActivePanel} />
 
         <main className="main">
-
-          <div className="stats-bar">
-            <button className="stat" onClick={() => handleStatClick('all')}>
-              <span className="stat-value">{medications.length}</span>
-              <span className="stat-label">Total</span>
-            </button>
-            <button className="stat stat-warning" onClick={() => handleStatClick('low')}>
-              <span className="stat-value">{medications.filter(m => isLowStock(m.quantity)).length}</span>
-              <span className="stat-label">Low Stock</span>
-            </button>
-            <button className="stat stat-danger" onClick={() => handleStatClick('expired')}>
-              <span className="stat-value">{medications.filter(m => isExpired(m.expiration_date)).length}</span>
-              <span className="stat-label">Expired</span>
-            </button>
-            <button className="stat stat-alert" onClick={() => handleStatClick('expiring')}>
-              <span className="stat-value">{medications.filter(m => isExpiringSoon(m.expiration_date)).length}</span>
-              <span className="stat-label">Expiring Soon</span>
-            </button>
-          </div>
+          <StatsBar
+            medications={medications}
+            isLowStock={isLowStock}
+            isExpired={isExpired}
+            isExpiringSoon={isExpiringSoon}
+            onStatClick={handleStatClick}
+          />
 
           {activePanel === 'inventory' && (
             <>
@@ -898,23 +695,14 @@ function App() {
                     Generate Reorder
                   </button>
                   <div className="export-dropdown-wrapper">
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setShowExportMenu(!showExportMenu)}
-                    >
-                      Export {showExportMenu ? '▴' : '▾'}
+                    <button className="btn btn-secondary" onClick={() => setShowExportMenu(!showExportMenu)}>
+                      Export {showExportMenu ? '\u25B4' : '\u25BE'}
                     </button>
                     {showExportMenu && (
                       <div className="export-dropdown">
-                        <button className="export-dropdown-item" onClick={() => { exportInventoryPDF(); setShowExportMenu(false); }}>
-                          Inventory Report
-                        </button>
-                        <button className="export-dropdown-item" onClick={() => { exportReorderPDF(); setShowExportMenu(false); }}>
-                          Reorder List
-                        </button>
-                        <button className="export-dropdown-item" onClick={() => { exportShipmentsPDF(); setShowExportMenu(false); }}>
-                          Shipment History
-                        </button>
+                        <button className="export-dropdown-item" onClick={() => { exportInventoryPDF(); setShowExportMenu(false); }}>Inventory Report</button>
+                        <button className="export-dropdown-item" onClick={() => { exportReorderPDF(); setShowExportMenu(false); }}>Reorder List</button>
+                        <button className="export-dropdown-item" onClick={() => { exportShipmentsPDF(); setShowExportMenu(false); }}>Shipment History</button>
                       </div>
                     )}
                   </div>
@@ -926,6 +714,7 @@ function App() {
                   placeholder="Search medications... ( / )"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Search medications"
                 />
                 <button
                   className={`btn btn-secondary${showFilters ? ' btn-filter-active' : ''}`}
@@ -983,51 +772,24 @@ function App() {
                     setShowForm(false);
                     setEditingId(null);
                     setFormData({ name: '', quantity: '', expiration_date: '', price: '' });
-                  }}>X</button>
+                  }} aria-label="Close form">X</button>
                 </div>
                 <form onSubmit={handleSubmit}>
                   <div className="form-group">
                     <label>Medication Name & Strength *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Amoxicillin 500mg"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      maxLength={100}
-                    />
+                    <input type="text" placeholder="e.g., Amoxicillin 500mg" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} maxLength={100} />
                   </div>
                   <div className="form-group">
                     <label>Quantity * (1-1000)</label>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      min="1"
-                      max="1000"
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                    />
+                    <input type="number" placeholder="0" min="1" max="1000" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: e.target.value})} />
                   </div>
                   <div className="form-group">
                     <label>Price * ($0.01 - $10,000)</label>
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0.01"
-                      max="10000"
-                      value={formData.price}
-                      onChange={(e) => setFormData({...formData, price: e.target.value})}
-                    />
+                    <input type="number" placeholder="0.00" step="0.01" min="0.01" max="10000" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
                   </div>
                   <div className="form-group">
                     <label>Expiration Date * (must be within 5 years)</label>
-                    <input
-                      type="date"
-                      min={editingId ? undefined : getMinDate()}
-                      max={getMaxDate()}
-                      value={formData.expiration_date}
-                      onChange={(e) => setFormData({...formData, expiration_date: e.target.value})}
-                    />
+                    <input type="date" min={editingId ? undefined : getMinDate()} max={getMaxDate()} value={formData.expiration_date} onChange={(e) => setFormData({...formData, expiration_date: e.target.value})} />
                   </div>
                   <button type="submit" className="btn btn-primary btn-block">
                     {editingId ? 'Update Medication' : 'Add to Inventory'}
@@ -1036,534 +798,147 @@ function App() {
                 <div className="slide-panel-hint">Press Esc to close</div>
               </div>
 
-              {medications.length === 0 ? (
-                <div className="empty-state">
-                  <p>No medications in inventory</p>
-                  <span>Click "+ Add Medication" to get started</span>
-                </div>
-              ) : (
-                <div className="table-container">
-                  <table className="med-table">
-                    <thead>
-                      <tr>
-                        <th className="th-sortable" onClick={() => handleSort('id')}>
-                          ID{getSortIndicator('id')}
-                        </th>
-                        <th className="th-sortable" onClick={() => handleSort('name')}>
-                          Medication{getSortIndicator('name')}
-                        </th>
-                        <th className="th-sortable" onClick={() => handleSort('quantity')}>
-                          Quantity{getSortIndicator('quantity')}
-                        </th>
-                        <th className="th-sortable" onClick={() => handleSort('expiration')}>
-                          Expiration{getSortIndicator('expiration')}
-                        </th>
-                        <th className="th-sortable" onClick={() => handleSort('price')}>
-                          Price{getSortIndicator('price')}
-                        </th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedMedications.map((med) => (
-                        <tr key={med.id} className={`${isExpired(med.expiration_date) ? 'row-expired' : ''} ${getRowUrgencyClass(med)}`}>
-                          <td className="id-cell">#{med.id}</td>
-                          <td className="name-cell">{med.name}</td>
-                          <td>
-                            <div className="qty-cell">
-                              <span className={isLowStock(med.quantity) ? 'low-stock' : ''}>{med.quantity}</span>
-                              <div className="qty-bar">
-                                <div
-                                  className="qty-bar-fill"
-                                  style={{
-                                    width: `${getQuantityPercent(med.quantity)}%`,
-                                    backgroundColor: getQuantityColor(med.quantity)
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </td>
-                          <td>{med.expiration_date}</td>
-                          <td>${parseFloat(med.price).toFixed(2)}</td>
-                          <td className="status-cell">
-                            {isExpired(med.expiration_date) && <span className="badge badge-expired">Expired</span>}
-                            {isExpiringSoon(med.expiration_date) && <span className="badge badge-warning">Expiring Soon</span>}
-                            {isLowStock(med.quantity) && <span className="badge badge-low">Low Stock</span>}
-                            {!isExpired(med.expiration_date) && !isExpiringSoon(med.expiration_date) && !isLowStock(med.quantity) &&
-                              <span className="badge badge-ok">OK</span>}
-                          </td>
-                          <td className="actions-cell">
-                            <button className="btn-sm btn-edit" onClick={() => handleEdit(med)}>Edit</button>
-                            <button className="btn-sm btn-delete" onClick={() => handleDelete(med.id, med.name)}>Delete</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <MedicationTable
+                medications={sortedMedications}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+                isExpired={isExpired}
+                isExpiringSoon={isExpiringSoon}
+                isLowStock={isLowStock}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             </>
           )}
 
-          {activePanel === 'charts' && medications.length > 0 && (
-            <div className="predictions-panel">
-              <h2>Inventory Analytics</h2>
-              <p className="predictions-subtitle">Visual overview of stock levels, expiration timeline, and inventory value</p>
-              <div className="charts-grid">
-                <div className="chart-card">
-                  <h3 className="chart-title">Stock Levels</h3>
-                  <p className="chart-subtitle">Sorted by quantity (lowest first)</p>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={getStockChartData()} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
-                      <YAxis fontSize={12} tick={{ fill: '#64748B' }} />
-                      <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} />
-                      <Bar dataKey="quantity" radius={[4, 4, 0, 0]}>
-                        {getStockChartData().map((entry, index) => (
-                          <Cell key={index} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="chart-legend">
-                    <span className="legend-item"><span className="legend-dot" style={{ background: '#DC2626' }}></span>Critical (&lt;10)</span>
-                    <span className="legend-item"><span className="legend-dot" style={{ background: '#D97706' }}></span>Low (&lt;30)</span>
-                    <span className="legend-item"><span className="legend-dot" style={{ background: '#0D9488' }}></span>Healthy</span>
-                  </div>
-                </div>
-
-                <div className="chart-card">
-                  <h3 className="chart-title">Expiration Timeline</h3>
-                  <p className="chart-subtitle">Days until expiration (soonest first)</p>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={getExpirationData()} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
-                      <YAxis fontSize={12} tick={{ fill: '#64748B' }} label={{ value: 'Days', angle: -90, position: 'insideLeft', fontSize: 12, fill: '#94A3B8' }} />
-                      <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} formatter={(value) => [`${value} days`, 'Days Left']} />
-                      <Bar dataKey="days" radius={[4, 4, 0, 0]}>
-                        {getExpirationData().map((entry, index) => (
-                          <Cell key={index} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="chart-legend">
-                    <span className="legend-item"><span className="legend-dot" style={{ background: '#DC2626' }}></span>This week</span>
-                    <span className="legend-item"><span className="legend-dot" style={{ background: '#D97706' }}></span>This month</span>
-                    <span className="legend-item"><span className="legend-dot" style={{ background: '#7c3aed' }}></span>3 months</span>
-                    <span className="legend-item"><span className="legend-dot" style={{ background: '#0D9488' }}></span>Later</span>
-                  </div>
-                </div>
-
-                <div className="chart-card chart-card-full">
-                  <h3 className="chart-title">Inventory Value</h3>
-                  <p className="chart-subtitle">Total value per medication (quantity x price)</p>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={getValueChartData()} margin={{ top: 10, right: 20, left: 10, bottom: 60 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
-                      <YAxis fontSize={12} tick={{ fill: '#64748B' }} tickFormatter={(v) => `$${v}`} />
-                      <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} formatter={(value) => [`$${value.toFixed(2)}`, 'Value']} />
-                      <Bar dataKey="value" fill="#0D9488" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activePanel === 'charts' && medications.length === 0 && (
-            <div className="empty-state">
-              <p>No data to visualize</p>
-              <span>Add medications to see analytics</span>
-            </div>
+          {activePanel === 'charts' && (
+            <Suspense fallback={<div className="loading">Loading analytics...</div>}>
+              <AnalyticsPanel medications={medications} />
+            </Suspense>
           )}
 
           {activePanel === 'predictions' && (
-            <div className="predictions-panel">
-              <h2>AI-Powered Inventory Predictions</h2>
-              <p className="predictions-subtitle">Using machine learning to predict stockouts based on usage patterns</p>
-              <div className="predictions-grid">
-                {predictions.map((pred) => (
-                  <div key={pred.medication_id} className="prediction-card">
-                    <div className="prediction-header">
-                      <h3>{pred.medication_name}</h3>
-                      <span
-                        className="risk-badge"
-                        style={{ backgroundColor: getRiskColor(pred.risk_level) }}
-                      >
-                        {pred.risk_level}
-                      </span>
-                    </div>
-                    <div className="prediction-body">
-                      <div className="prediction-stat">
-                        <span className="stat-label">Current Stock</span>
-                        <span className="stat-value">{pred.current_quantity} units</span>
-                      </div>
-                      <div className="prediction-stat">
-                        <span className="stat-label">Avg Daily Usage</span>
-                        <span className="stat-value">{pred.avg_daily_usage} units/day</span>
-                      </div>
-                      <div className="prediction-stat">
-                        <span className="stat-label">Days Until Stockout</span>
-                        <span className="stat-value" style={{ color: getRiskColor(pred.risk_level) }}>
-                          {pred.days_until_stockout} days
-                        </span>
-                      </div>
-                      <div className="prediction-stat">
-                        <span className="stat-label">Predicted Stockout</span>
-                        <span className="stat-value">{pred.predicted_stockout_date}</span>
-                      </div>
-                      <div className="prediction-stat highlight">
-                        <span className="stat-label">Reorder By</span>
-                        <span className="stat-value">{pred.recommended_reorder_date}</span>
-                      </div>
-                      <div className="prediction-stat highlight">
-                        <span className="stat-label">Recommended Order</span>
-                        <span className="stat-value">{pred.recommended_order_quantity} units</span>
-                      </div>
-                      {pred.expires_before_stockout && (
-                        <div className="prediction-stat" style={{ background: 'var(--danger-light)', margin: '0 -16px', padding: '10px 16px', borderRadius: '0 0 var(--radius) var(--radius)', marginBottom: '-16px' }}>
-                          <span className="stat-label" style={{ color: 'var(--danger)', fontWeight: 600 }}>Expires before stockout</span>
-                          <span className="stat-value" style={{ color: 'var(--danger)' }}>Replacement needed</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PredictionsPanel predictions={predictions} />
           )}
 
           {activePanel === 'orders' && (
-            <div className="predictions-panel">
-              <h2>Order History</h2>
-              <p className="predictions-subtitle">Track reorder status from pending to received</p>
-              {orders.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No orders yet. Use "Generate Reorder" to create one.</p>
-              ) : (
-                <div className="orders-list">
-                  {orders.map(order => (
-                    <div key={order.order_id} className="order-card">
-                      <div className="order-header">
-                        <div>
-                          <strong>{order.order_id}</strong>
-                          <span className="order-date">{order.created_at}</span>
-                        </div>
-                        <div className="order-header-right">
-                          <span className={`badge badge-order-${order.status}`}>{order.status}</span>
-                          {order.status === 'pending' && (
-                            <button className="btn-sm btn-edit" onClick={() => handleUpdateOrderStatus(order.order_id, 'submitted')}>Mark Submitted</button>
-                          )}
-                          {order.status === 'submitted' && (
-                            <button className="btn-sm btn-edit" onClick={() => handleUpdateOrderStatus(order.order_id, 'received')}>Mark Received</button>
-                          )}
-                        </div>
-                      </div>
-                      {order.notes && <div className="order-notes">{order.notes}</div>}
-                      <table className="modal-table">
-                        <thead>
-                          <tr>
-                            <th>Medication</th>
-                            <th>Current Qty</th>
-                            <th>Order Qty</th>
-                            <th>Reason</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {order.items.map((item, i) => (
-                            <tr key={i}>
-                              <td>{item.medication_name}</td>
-                              <td>{item.current_quantity}</td>
-                              <td><strong>{item.order_quantity}</strong></td>
-                              <td>
-                                {item.reason.split(', ').map((r, j) => (
-                                  <span key={j} className="badge badge-low" style={{ marginRight: '4px', fontSize: '0.65rem' }}>{r}</span>
-                                ))}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <OrdersPanel orders={orders} onUpdateStatus={handleUpdateOrderStatus} />
           )}
 
           {activePanel === 'shipments' && (
-            <div className="predictions-panel">
-              <h2>Shipment History</h2>
-              <p className="predictions-subtitle">Record of all received shipments and their line items</p>
-              {shipmentHistory.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No shipments received yet. Use "Receive Shipment" to log one.</p>
-              ) : (
-                <div className="orders-list">
-                  {shipmentHistory.map(shipment => (
-                    <div key={shipment.shipment_id} className="order-card">
-                      <div className="order-header">
-                        <div>
-                          <strong>{shipment.shipment_id}</strong>
-                          <span className="order-date">{shipment.supplier_name}</span>
-                        </div>
-                        <div className="order-header-right">
-                          <span className="badge badge-ok">{shipment.date_received}</span>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                            {shipment.total_items} units - ${parseFloat(shipment.total_value).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                      <table className="modal-table">
-                        <thead>
-                          <tr>
-                            <th>Medication</th>
-                            <th>Qty</th>
-                            <th>Expiration</th>
-                            <th>Price</th>
-                            <th>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {shipment.items.map((item, i) => (
-                            <tr key={i}>
-                              <td>{item.medication_name}</td>
-                              <td>{item.quantity}</td>
-                              <td>{item.expiration_date}</td>
-                              <td>${parseFloat(item.price).toFixed(2)}</td>
-                              <td>
-                                <span className={`badge ${item.action === 'created' ? 'badge-ok' : 'badge-low'}`}>
-                                  {item.action}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
+            <ShipmentsPanel shipments={shipmentHistory} />
+          )}
+
+          {showReorderModal && (
+            <div className="modal-overlay" onClick={() => setShowReorderModal(false)}>
+              <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Generate Reorder">
+                <div className="modal-header">
+                  <h2>Generate Reorder</h2>
+                  <button className="modal-close" onClick={() => setShowReorderModal(false)} aria-label="Close">X</button>
                 </div>
-              )}
+                <div className="modal-body">
+                  {reorderSuggestions.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px' }}>No items need reordering right now. All stock levels are healthy.</p>
+                  ) : (
+                    <>
+                      <div className="section-header">
+                        <h3>{reorderSuggestions.length} items suggested</h3>
+                        <button className="btn btn-secondary btn-sm-action" onClick={toggleSelectAll}>
+                          {Object.values(reorderSelected).every(v => v.selected) ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
+                      <div className="table-container modal-table-container">
+                        <table className="reorder-table">
+                          <thead>
+                            <tr><th></th><th>Medication</th><th>Current Qty</th><th>Order Qty</th><th>Reason</th></tr>
+                          </thead>
+                          <tbody>
+                            {reorderSuggestions.map(s => (
+                              <tr key={s.medication_id} className={!reorderSelected[s.medication_id]?.selected ? 'row-deselected' : ''}>
+                                <td><input type="checkbox" checked={reorderSelected[s.medication_id]?.selected || false} onChange={() => toggleReorderItem(s.medication_id)} /></td>
+                                <td className="name-cell">{s.medication_name}</td>
+                                <td>{s.current_quantity}</td>
+                                <td><input type="number" className="qty-input" min="1" max="1000" value={reorderSelected[s.medication_id]?.order_quantity || ''} onChange={(e) => updateOrderQuantity(s.medication_id, e.target.value)} disabled={!reorderSelected[s.medication_id]?.selected} /></td>
+                                <td>{s.reasons.map((r, i) => (<span key={i} className="badge badge-low" style={{ marginRight: '4px', fontSize: '0.65rem' }}>{r}</span>))}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="form-group" style={{ marginTop: '16px' }}>
+                        <label>Notes (optional)</label>
+                        <input type="text" placeholder="e.g., Urgent restock for flu season" value={reorderNotes} onChange={(e) => setReorderNotes(e.target.value)} />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setShowReorderModal(false)}>Cancel</button>
+                  {reorderSuggestions.length > 0 && (
+                    <button className="btn btn-primary" onClick={handleReorderSubmit} disabled={reorderLoading}>
+                      {reorderLoading ? 'Submitting...' : `Create Order (${Object.values(reorderSelected).filter(v => v.selected).length} items)`}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
-        {showReorderModal && (
-          <div className="modal-overlay" onClick={() => setShowReorderModal(false)}>
-            <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Generate Reorder</h2>
-                <button className="modal-close" onClick={() => setShowReorderModal(false)}>X</button>
-              </div>
-              <div className="modal-body">
-                {reorderSuggestions.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px' }}>
-                    No items need reordering right now. All stock levels are healthy.
-                  </p>
-                ) : (
-                  <>
-                    <div className="section-header">
-                      <h3>{reorderSuggestions.length} items suggested</h3>
-                      <button className="btn btn-secondary btn-sm-action" onClick={toggleSelectAll}>
-                        {Object.values(reorderSelected).every(v => v.selected) ? 'Deselect All' : 'Select All'}
-                      </button>
+
+          {showShipmentModal && (
+            <div className="modal-overlay" onClick={() => setShowShipmentModal(false)}>
+              <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Receive Shipment">
+                <div className="modal-header">
+                  <h2>Receive Shipment</h2>
+                  <button className="modal-close" onClick={() => setShowShipmentModal(false)} aria-label="Close">X</button>
+                </div>
+                <div className="modal-body">
+                  <div className="form-row-3">
+                    <div className="form-group">
+                      <label>Shipment ID</label>
+                      <input type="text" className="input-disabled" value={shipmentData.shipment_id} disabled />
                     </div>
-                    <div className="table-container modal-table-container">
-                      <table className="reorder-table">
-                        <thead>
-                          <tr>
-                            <th></th>
-                            <th>Medication</th>
-                            <th>Current Qty</th>
-                            <th>Order Qty</th>
-                            <th>Reason</th>
+                    <div className="form-group">
+                      <label>Supplier Name *</label>
+                      <input type="text" placeholder="e.g., McKesson" value={shipmentData.supplier_name} onChange={(e) => setShipmentData({ ...shipmentData, supplier_name: e.target.value })} maxLength={200} />
+                    </div>
+                    <div className="form-group">
+                      <label>Date Received *</label>
+                      <input type="date" value={shipmentData.date_received} max={new Date().toISOString().split('T')[0]} onChange={(e) => setShipmentData({ ...shipmentData, date_received: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="section-header">
+                    <h3>Line Items</h3>
+                    <button className="btn btn-secondary btn-sm-action" onClick={addShipmentItem}>+ Add Item</button>
+                  </div>
+                  <div className="table-container modal-table-container">
+                    <table className="modal-table">
+                      <thead>
+                        <tr><th>Medication Name</th><th>Quantity</th><th>Expiration Date</th><th>Unit Price</th><th></th></tr>
+                      </thead>
+                      <tbody>
+                        {shipmentData.items.map((item, index) => (
+                          <tr key={index}>
+                            <td><input type="text" placeholder="e.g., Ibuprofen 200mg" value={item.medication_name} onChange={(e) => updateShipmentItem(index, 'medication_name', e.target.value)} maxLength={100} /></td>
+                            <td><input type="number" placeholder="Qty" min="1" max="1000" value={item.quantity} onChange={(e) => updateShipmentItem(index, 'quantity', e.target.value)} /></td>
+                            <td><input type="date" min={getMinDate()} max={getMaxDate()} value={item.expiration_date} onChange={(e) => updateShipmentItem(index, 'expiration_date', e.target.value)} /></td>
+                            <td><input type="number" placeholder="0.00" step="0.01" min="0.01" max="10000" value={item.price} onChange={(e) => updateShipmentItem(index, 'price', e.target.value)} /></td>
+                            <td><button className="btn-sm btn-delete" onClick={() => removeShipmentItem(index)} disabled={shipmentData.items.length <= 1}>Remove</button></td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {reorderSuggestions.map(s => (
-                            <tr key={s.medication_id} className={!reorderSelected[s.medication_id]?.selected ? 'row-deselected' : ''}>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={reorderSelected[s.medication_id]?.selected || false}
-                                  onChange={() => toggleReorderItem(s.medication_id)}
-                                />
-                              </td>
-                              <td className="name-cell">{s.medication_name}</td>
-                              <td>{s.current_quantity}</td>
-                              <td>
-                                <input
-                                  type="number"
-                                  className="qty-input"
-                                  min="1"
-                                  max="1000"
-                                  value={reorderSelected[s.medication_id]?.order_quantity || ''}
-                                  onChange={(e) => updateOrderQuantity(s.medication_id, e.target.value)}
-                                  disabled={!reorderSelected[s.medication_id]?.selected}
-                                />
-                              </td>
-                              <td>
-                                {s.reasons.map((r, i) => (
-                                  <span
-                                    key={i}
-                                    className="badge badge-low"
-                                    style={{ marginRight: '4px', fontSize: '0.65rem' }}
-                                  >
-                                    {r}
-                                  </span>
-                                ))}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="form-group" style={{ marginTop: '16px' }}>
-                      <label>Notes (optional)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., Urgent restock for flu season"
-                        value={reorderNotes}
-                        onChange={(e) => setReorderNotes(e.target.value)}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setShowReorderModal(false)}>Cancel</button>
-                {reorderSuggestions.length > 0 && (
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleReorderSubmit}
-                    disabled={reorderLoading}
-                  >
-                    {reorderLoading ? 'Submitting...' : `Create Order (${Object.values(reorderSelected).filter(v => v.selected).length} items)`}
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setShowShipmentModal(false)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleShipmentSubmit} disabled={shipmentLoading}>
+                    {shipmentLoading ? 'Processing...' : 'Receive Shipment'}
                   </button>
-                )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        {showShipmentModal && (
-          <div className="modal-overlay" onClick={() => setShowShipmentModal(false)}>
-            <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Receive Shipment</h2>
-                <button className="modal-close" onClick={() => setShowShipmentModal(false)}>X</button>
-              </div>
-              <div className="modal-body">
-                <div className="form-row-3">
-                  <div className="form-group">
-                    <label>Shipment ID</label>
-                    <input type="text" className="input-disabled" value={shipmentData.shipment_id} disabled />
-                  </div>
-                  <div className="form-group">
-                    <label>Supplier Name *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., McKesson"
-                      value={shipmentData.supplier_name}
-                      onChange={(e) => setShipmentData({ ...shipmentData, supplier_name: e.target.value })}
-                      maxLength={200}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Date Received *</label>
-                    <input
-                      type="date"
-                      value={shipmentData.date_received}
-                      max={new Date().toISOString().split('T')[0]}
-                      onChange={(e) => setShipmentData({ ...shipmentData, date_received: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="section-header">
-                  <h3>Line Items</h3>
-                  <button className="btn btn-secondary btn-sm-action" onClick={addShipmentItem}>+ Add Item</button>
-                </div>
-                <div className="table-container modal-table-container">
-                  <table className="modal-table">
-                    <thead>
-                      <tr>
-                        <th>Medication Name</th>
-                        <th>Quantity</th>
-                        <th>Expiration Date</th>
-                        <th>Unit Price</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shipmentData.items.map((item, index) => (
-                        <tr key={index}>
-                          <td>
-                            <input
-                              type="text"
-                              placeholder="e.g., Ibuprofen 200mg"
-                              value={item.medication_name}
-                              onChange={(e) => updateShipmentItem(index, 'medication_name', e.target.value)}
-                              maxLength={100}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              placeholder="Qty"
-                              min="1"
-                              max="1000"
-                              value={item.quantity}
-                              onChange={(e) => updateShipmentItem(index, 'quantity', e.target.value)}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="date"
-                              min={getMinDate()}
-                              max={getMaxDate()}
-                              value={item.expiration_date}
-                              onChange={(e) => updateShipmentItem(index, 'expiration_date', e.target.value)}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              placeholder="0.00"
-                              step="0.01"
-                              min="0.01"
-                              max="10000"
-                              value={item.price}
-                              onChange={(e) => updateShipmentItem(index, 'price', e.target.value)}
-                            />
-                          </td>
-                          <td>
-                            <button
-                              className="btn-sm btn-delete"
-                              onClick={() => removeShipmentItem(index)}
-                              disabled={shipmentData.items.length <= 1}
-                            >
-                              Remove
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setShowShipmentModal(false)}>Cancel</button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleShipmentSubmit}
-                  disabled={shipmentLoading}
-                >
-                  {shipmentLoading ? 'Processing...' : 'Receive Shipment'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
         </main>
       </div>
 
@@ -1571,14 +946,7 @@ function App() {
         <p>PharmTrack v2.0 - Pharmacy inventory and stock management</p>
       </footer>
 
-      <div className="toast-container">
-        {toasts.map(toast => (
-          <div key={toast.id} className={`toast toast-${toast.type}${toast.exiting ? ' toast-exit' : ''}`}>
-            <span className="toast-message">{toast.message}</span>
-            <button className="toast-close" onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}>X</button>
-          </div>
-        ))}
-      </div>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
