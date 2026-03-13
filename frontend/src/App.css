@@ -519,7 +519,8 @@ body {
   background: var(--surface);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  overflow: hidden;
+  overflow: auto;
+  max-height: 70vh;
   animation: fadeIn 400ms ease-out;
 }
 
@@ -538,6 +539,20 @@ body {
   color: var(--text-muted);
   font-weight: 700;
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition);
+  white-space: nowrap;
+}
+
+.th-sortable:hover {
+  color: var(--accent);
 }
 
 .med-table td {
@@ -576,6 +591,40 @@ body {
 .low-stock {
   color: var(--warning);
   font-weight: 700;
+}
+
+/* ---- Quantity Bar ---- */
+.qty-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 80px;
+}
+
+.qty-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.qty-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ---- Row Urgency ---- */
+.row-urgency-expired {
+  border-left: 3px solid var(--danger);
+}
+
+.row-urgency-low {
+  border-left: 3px solid var(--warning);
+}
+
+.row-urgency-warning {
+  border-left: 3px solid #7c3aed;
 }
 
 .status-cell {

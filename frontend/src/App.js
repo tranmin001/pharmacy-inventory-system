@@ -19,6 +19,8 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [activePanel, setActivePanel] = useState('inventory');
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
@@ -588,6 +590,49 @@ function App() {
 
   const filteredMedications = getFilteredMedications();
 
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIndicator = (column) => {
+    if (sortColumn !== column) return ' \u2195';
+    return sortDirection === 'asc' ? ' \u2191' : ' \u2193';
+  };
+
+  const sortedMedications = [...filteredMedications].sort((a, b) => {
+    if (!sortColumn) return 0;
+    const dir = sortDirection === 'asc' ? 1 : -1;
+    switch (sortColumn) {
+      case 'id': return (a.id - b.id) * dir;
+      case 'name': return a.name.localeCompare(b.name) * dir;
+      case 'quantity': return (a.quantity - b.quantity) * dir;
+      case 'expiration': return (new Date(a.expiration_date) - new Date(b.expiration_date)) * dir;
+      case 'price': return (parseFloat(a.price) - parseFloat(b.price)) * dir;
+      default: return 0;
+    }
+  });
+
+  const getRowUrgencyClass = (med) => {
+    if (isExpired(med.expiration_date)) return 'row-urgency-expired';
+    if (isLowStock(med.quantity) && isExpiringSoon(med.expiration_date)) return 'row-urgency-expired';
+    if (isLowStock(med.quantity)) return 'row-urgency-low';
+    if (isExpiringSoon(med.expiration_date)) return 'row-urgency-warning';
+    return '';
+  };
+
+  const getQuantityPercent = (quantity) => Math.min((quantity / 100) * 100, 100);
+
+  const getQuantityColor = (quantity) => {
+    if (quantity < 10) return 'var(--danger)';
+    if (quantity < 30) return 'var(--warning)';
+    return 'var(--accent)';
+  };
+
   const getMinDate = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -938,21 +983,44 @@ function App() {
                   <table className="med-table">
                     <thead>
                       <tr>
-                        <th>ID</th>
-                        <th>Medication</th>
-                        <th>Quantity</th>
-                        <th>Expiration</th>
-                        <th>Price</th>
+                        <th className="th-sortable" onClick={() => handleSort('id')}>
+                          ID{getSortIndicator('id')}
+                        </th>
+                        <th className="th-sortable" onClick={() => handleSort('name')}>
+                          Medication{getSortIndicator('name')}
+                        </th>
+                        <th className="th-sortable" onClick={() => handleSort('quantity')}>
+                          Quantity{getSortIndicator('quantity')}
+                        </th>
+                        <th className="th-sortable" onClick={() => handleSort('expiration')}>
+                          Expiration{getSortIndicator('expiration')}
+                        </th>
+                        <th className="th-sortable" onClick={() => handleSort('price')}>
+                          Price{getSortIndicator('price')}
+                        </th>
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredMedications.map((med) => (
-                        <tr key={med.id} className={isExpired(med.expiration_date) ? 'row-expired' : ''}>
+                      {sortedMedications.map((med) => (
+                        <tr key={med.id} className={`${isExpired(med.expiration_date) ? 'row-expired' : ''} ${getRowUrgencyClass(med)}`}>
                           <td className="id-cell">#{med.id}</td>
                           <td className="name-cell">{med.name}</td>
-                          <td className={isLowStock(med.quantity) ? 'low-stock' : ''}>{med.quantity}</td>
+                          <td>
+                            <div className="qty-cell">
+                              <span className={isLowStock(med.quantity) ? 'low-stock' : ''}>{med.quantity}</span>
+                              <div className="qty-bar">
+                                <div
+                                  className="qty-bar-fill"
+                                  style={{
+                                    width: `${getQuantityPercent(med.quantity)}%`,
+                                    backgroundColor: getQuantityColor(med.quantity)
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </td>
                           <td>{med.expiration_date}</td>
                           <td>${parseFloat(med.price).toFixed(2)}</td>
                           <td className="status-cell">
