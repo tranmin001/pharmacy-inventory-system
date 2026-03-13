@@ -1,5 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './LandingPage.css';
+
+const NAV_LINKS = [
+  { label: 'Features', href: '#features' },
+  { label: 'Architecture', href: '#architecture' },
+  { label: 'About', href: '#about' },
+];
 
 const FEATURES = [
   {
@@ -35,6 +41,14 @@ const HIGHLIGHTS = [
 ];
 
 export default function LandingPage({ onEnterApp }) {
+  const [navScrolled, setNavScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setNavScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -55,8 +69,25 @@ export default function LandingPage({ onEnterApp }) {
 
   return (
     <div className="lp-page">
+      {/* Nav */}
+      <nav className={`lp-nav${navScrolled ? ' lp-nav-scrolled' : ''}`}>
+        <div className="lp-nav-inner">
+          <a className="lp-nav-brand" href="#hero">PharmTrack</a>
+          <div className="lp-nav-links">
+            {NAV_LINKS.map((link) => (
+              <a key={link.href} className="lp-nav-link" href={link.href}>
+                {link.label}
+              </a>
+            ))}
+            <button className="lp-nav-cta" onClick={onEnterApp}>
+              Enter Dashboard
+            </button>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero */}
-      <section className="lp-hero">
+      <section className="lp-hero" id="hero">
         <div className="lp-hero-inner">
           <span className="lp-accent-bar lp-reveal lp-stagger-1 lp-visible" />
           <h1 className="lp-hero-headline lp-reveal lp-stagger-2 lp-visible">
@@ -75,7 +106,7 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* Features */}
-      <section className="lp-features">
+      <section className="lp-features" id="features">
         <p className="lp-section-label lp-reveal">Features</p>
         <h2 className="lp-section-title lp-reveal">What it does</h2>
         <div className="lp-features-grid">
@@ -89,7 +120,7 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* Tech Stack */}
-      <section className="lp-tech">
+      <section className="lp-tech" id="architecture">
         <p className="lp-section-label lp-reveal">Architecture</p>
         <h2 className="lp-section-title lp-reveal">How it's built</h2>
         <div className="lp-tech-grid">
@@ -107,7 +138,7 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* About */}
-      <section className="lp-about">
+      <section className="lp-about" id="about">
         <p className="lp-section-label lp-reveal">About</p>
         <h2 className="lp-section-title lp-reveal">Project context</h2>
         <p className="lp-about-text lp-reveal">
@@ -136,6 +167,42 @@ export default function LandingPage({ onEnterApp }) {
           </a>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="lp-footer">
+        <div className="lp-footer-inner">
+          <div className="lp-footer-brand">
+            <span className="lp-footer-logo">PharmTrack</span>
+            <p className="lp-footer-tagline">
+              Built by a pharmacy tech turned software engineer.
+            </p>
+          </div>
+          <div className="lp-footer-links">
+            <div className="lp-footer-col">
+              <h4>Navigation</h4>
+              <a href="#features">Features</a>
+              <a href="#architecture">Architecture</a>
+              <a href="#about">About</a>
+            </div>
+            <div className="lp-footer-col">
+              <h4>Project</h4>
+              <a
+                href="https://github.com/tranmin001/pharmacy-inventory-system"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                GitHub
+              </a>
+              <button className="lp-footer-dashboard-link" onClick={onEnterApp}>
+                Live Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="lp-footer-bottom">
+          <p>&copy; {new Date().getFullYear()} PharmTrack. Trung Tran.</p>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -29,7 +29,89 @@
   box-sizing: border-box;
 }
 
-/* ── Scroll Reveal ── */
+/* ==============================
+   NAVIGATION
+   ============================== */
+.lp-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 0 10vw;
+  transition: background 0.3s, box-shadow 0.3s, padding 0.3s;
+}
+
+.lp-nav-scrolled {
+  background: var(--lp-bg-dark);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+}
+
+.lp-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.lp-nav-brand {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.35rem;
+  color: var(--lp-text-light);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  transition: opacity 0.2s;
+}
+
+.lp-nav-brand:hover {
+  opacity: 0.8;
+}
+
+.lp-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.lp-nav-link {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--lp-text-muted);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: color 0.2s;
+}
+
+.lp-nav-link:hover {
+  color: var(--lp-text-light);
+}
+
+.lp-nav-cta {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--lp-white);
+  background: var(--lp-accent);
+  border: none;
+  border-radius: 5px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  letter-spacing: 0.01em;
+}
+
+.lp-nav-cta:hover {
+  background: var(--lp-accent-hover);
+  transform: translateY(-1px);
+}
+
+/* Offset anchor scroll for fixed nav */
+.lp-page section[id] {
+  scroll-margin-top: 64px;
+}
+
+/* Scroll Reveal */
 .lp-reveal {
   opacity: 0;
   transform: translateY(32px);
@@ -318,7 +400,102 @@
   text-decoration: underline;
 }
 
-/* ══════════════════════════════════
+/* ==============================
+   FOOTER
+   ============================== */
+.lp-footer {
+  background: var(--lp-bg-dark);
+  padding: 64px 10vw 0;
+  border-top: 1px solid #1E293B;
+}
+
+.lp-footer-inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 48px;
+  padding-bottom: 48px;
+}
+
+.lp-footer-brand {
+  max-width: 320px;
+}
+
+.lp-footer-logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.35rem;
+  color: var(--lp-text-light);
+  letter-spacing: -0.01em;
+}
+
+.lp-footer-tagline {
+  font-size: 0.9rem;
+  color: var(--lp-text-muted);
+  margin: 12px 0 0;
+  line-height: 1.6;
+}
+
+.lp-footer-links {
+  display: flex;
+  gap: 64px;
+}
+
+.lp-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lp-footer-col h4 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--lp-text-light);
+  margin: 0 0 4px;
+}
+
+.lp-footer-col a {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.88rem;
+  color: var(--lp-text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.lp-footer-col a:hover {
+  color: var(--lp-accent);
+}
+
+.lp-footer-dashboard-link {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.88rem;
+  color: var(--lp-text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s;
+}
+
+.lp-footer-dashboard-link:hover {
+  color: var(--lp-accent);
+}
+
+.lp-footer-bottom {
+  border-top: 1px solid #1E293B;
+  padding: 20px 0;
+}
+
+.lp-footer-bottom p {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.8rem;
+  color: #475569;
+  margin: 0;
+}
+
+/* ==============================
    DARK MODE OVERRIDES
    (only white/light sections need change)
    ══════════════════════════════════ */
@@ -357,6 +534,18 @@
    RESPONSIVE
    ══════════════════════════════════ */
 @media (max-width: 768px) {
+  .lp-nav {
+    padding: 0 6vw;
+  }
+
+  .lp-nav-links {
+    gap: 20px;
+  }
+
+  .lp-nav-link {
+    font-size: 0.82rem;
+  }
+
   .lp-hero {
     padding: 0 6vw;
     min-height: 90vh;
@@ -389,9 +578,34 @@
   .lp-section-title {
     font-size: 2rem;
   }
+
+  .lp-footer {
+    padding: 48px 6vw 0;
+  }
+
+  .lp-footer-inner {
+    flex-direction: column;
+    gap: 36px;
+  }
+
+  .lp-footer-links {
+    gap: 48px;
+  }
 }
 
 @media (max-width: 480px) {
+  .lp-nav {
+    padding: 0 5vw;
+  }
+
+  .lp-nav-links {
+    gap: 14px;
+  }
+
+  .lp-nav-link {
+    display: none;
+  }
+
   .lp-hero {
     padding: 0 5vw;
   }
@@ -428,5 +642,14 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
+  }
+
+  .lp-footer {
+    padding: 40px 5vw 0;
+  }
+
+  .lp-footer-links {
+    flex-direction: column;
+    gap: 32px;
   }
 }
