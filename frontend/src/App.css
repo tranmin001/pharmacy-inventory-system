@@ -1,6 +1,18 @@
 /* ========================================
-   PharmTrack — Clinical Precision Design
+   PharmTrack - Clinical Precision Design
    ======================================== */
+
+.App {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.app-transition-exit {
+  opacity: 0;
+  transform: scale(0.98);
+  pointer-events: none;
+}
 
 :root {
   --bg: #F8FAFB;

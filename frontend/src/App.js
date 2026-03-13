@@ -12,6 +12,7 @@ const STRENGTH_REGEX = /\d+\s*(?:mg|ml|mcg|g|ug|%|iu|meq|units?|caps?|tabs?|mg\/
 function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [landingExiting, setLandingExiting] = useState(false);
+  const [dashboardExiting, setDashboardExiting] = useState(false);
   const [medications, setMedications] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -662,7 +663,7 @@ function App() {
   }
 
   return (
-    <div className="App">
+    <div className={`App${dashboardExiting ? ' app-transition-exit' : ''}`}>
       <header className="header">
         <div className="header-content">
           <div className="header-top">
@@ -671,7 +672,14 @@ function App() {
               <p>Inventory Management System</p>
             </div>
             <div className="header-actions">
-              <button className="btn btn-secondary btn-home" onClick={() => { setShowLanding(true); window.scrollTo(0, 0); }}>
+              <button className="btn btn-secondary btn-home" onClick={() => {
+                setDashboardExiting(true);
+                setTimeout(() => {
+                  setShowLanding(true);
+                  setDashboardExiting(false);
+                  window.scrollTo(0, 0);
+                }, 400);
+              }}>
                 Home
               </button>
               <button className="btn btn-secondary btn-dark-toggle" onClick={() => setDarkMode(!darkMode)}>
