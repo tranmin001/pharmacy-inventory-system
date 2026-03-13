@@ -1565,7 +1565,7 @@ function App() {
       </div>
 
       <footer className="footer">
-        <p>PharmTrack v1.0 - Built for Safeway Pharmacy workflow optimization</p>
+        <p>PharmTrack v2.0 - Pharmacy inventory and stock management</p>
       </footer>
 
       <div className="toast-container">
