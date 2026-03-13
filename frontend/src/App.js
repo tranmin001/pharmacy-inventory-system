@@ -11,6 +11,7 @@ const STRENGTH_REGEX = /\d+\s*(?:mg|ml|mcg|g|ug|%|iu|meq|units?|caps?|tabs?|mg\/
 
 function App() {
   const [showLanding, setShowLanding] = useState(true);
+  const [landingExiting, setLandingExiting] = useState(false);
   const [medications, setMedications] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -645,7 +646,19 @@ function App() {
   }
 
   if (showLanding) {
-    return <LandingPage onEnterApp={() => setShowLanding(false)} />;
+    const handleEnterApp = () => {
+      setLandingExiting(true);
+      setTimeout(() => {
+        setShowLanding(false);
+        setLandingExiting(false);
+        window.scrollTo(0, 0);
+      }, 400);
+    };
+    return (
+      <div className={`lp-transition${landingExiting ? ' lp-transition-exit' : ''}`}>
+        <LandingPage onEnterApp={handleEnterApp} />
+      </div>
+    );
   }
 
   return (

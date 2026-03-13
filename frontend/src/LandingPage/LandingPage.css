@@ -1,6 +1,21 @@
 /* ── PharmTrack Landing Page ── */
 /* All classes prefixed lp- to avoid collisions with App.css */
 
+/* ==============================
+   PAGE TRANSITION
+   ============================== */
+.lp-transition {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.lp-transition-exit {
+  opacity: 0;
+  transform: scale(0.98);
+  pointer-events: none;
+}
+
 :root {
   --lp-bg-dark: #0F172A;
   --lp-bg-dark-lighter: #1E293B;
@@ -215,9 +230,44 @@
   transform: translateX(3px);
 }
 
-/* ══════════════════════════════════
+/* ==============================
+   LIVE STATS BAR
+   ============================== */
+.lp-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--lp-bg-dark-lighter);
+  border-top: 1px solid #334155;
+  border-bottom: 1px solid #334155;
+}
+
+.lp-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 16px;
+}
+
+.lp-stat-number {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.4rem;
+  color: var(--lp-accent);
+  line-height: 1;
+}
+
+.lp-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--lp-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+/* ==============================
    FEATURES SECTION
-   ══════════════════════════════════ */
+   ============================== */
 .lp-features {
   background: var(--lp-card-bg);
   padding: 100px 10vw;
@@ -743,6 +793,18 @@
     font-size: 1.05rem;
   }
 
+  .lp-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .lp-stat {
+    padding: 24px 16px;
+  }
+
+  .lp-stat-number {
+    font-size: 2rem;
+  }
+
   .lp-features,
   .lp-preview,
   .lp-tech,
@@ -807,6 +869,14 @@
 
   .lp-hero-subtitle {
     font-size: 0.95rem;
+  }
+
+  .lp-stat-number {
+    font-size: 1.6rem;
+  }
+
+  .lp-stat-label {
+    font-size: 0.65rem;
   }
 
   .lp-cta {

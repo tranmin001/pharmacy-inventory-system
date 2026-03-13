@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import axios from 'axios';
 import './LandingPage.css';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000/api';
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -63,13 +66,63 @@ const HIGHLIGHTS = [
   'PDF report generation for inventory documentation',
 ];
 
+function useCountUp(target, duration = 1200) {
+  const [value, setValue] = useState(0);
+  const ref = useRef(null);
+  const counted = useRef(false);
+
+  const startCount = useCallback(() => {
+    if (counted.current || target === 0) return;
+    counted.current = true;
+    const start = performance.now();
+    const step = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target, duration]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) startCount(); },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [startCount]);
+
+  return { value, ref };
+}
+
 export default function LandingPage({ onEnterApp }) {
   const [navScrolled, setNavScrolled] = useState(false);
+  const [stats, setStats] = useState({ medications: 0, predictions: 0, lowStock: 0, expired: 0 });
 
   useEffect(() => {
     const handleScroll = () => setNavScrolled(window.scrollY > 40);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    Promise.all([
+      axios.get(`${API_URL}/medications`).catch(() => ({ data: [] })),
+      axios.get(`${API_URL}/predictions`).catch(() => ({ data: { predictions: [] } })),
+      axios.get(`${API_URL}/medications/low-stock`).catch(() => ({ data: [] })),
+      axios.get(`${API_URL}/medications/expired`).catch(() => ({ data: [] })),
+    ]).then(([meds, preds, low, exp]) => {
+      setStats({
+        medications: Array.isArray(meds.data) ? meds.data.length : 0,
+        predictions: Array.isArray(preds.data?.predictions) ? preds.data.predictions.length
+          : Array.isArray(preds.data) ? preds.data.length : 0,
+        lowStock: Array.isArray(low.data) ? low.data.length : 0,
+        expired: Array.isArray(exp.data) ? exp.data.length : 0,
+      });
+    });
   }, []);
 
   useEffect(() => {
@@ -127,6 +180,9 @@ export default function LandingPage({ onEnterApp }) {
           </button>
         </div>
       </section>
+
+      {/* Live Stats */}
+      <StatsBar stats={stats} />
 
       {/* Features */}
       <section className="lp-features" id="features">
@@ -282,5 +338,26 @@ export default function LandingPage({ onEnterApp }) {
         </div>
       </footer>
     </div>
+  );
+}
+
+function StatItem({ label, value }) {
+  const counter = useCountUp(value);
+  return (
+    <div className="lp-stat" ref={counter.ref}>
+      <span className="lp-stat-number">{counter.value}</span>
+      <span className="lp-stat-label">{label}</span>
+    </div>
+  );
+}
+
+function StatsBar({ stats }) {
+  return (
+    <section className="lp-stats">
+      <StatItem label="Medications tracked" value={stats.medications} />
+      <StatItem label="Stockout predictions" value={stats.predictions} />
+      <StatItem label="Low stock alerts" value={stats.lowStock} />
+      <StatItem label="Expired flagged" value={stats.expired} />
+    </section>
   );
 }
