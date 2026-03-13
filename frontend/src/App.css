@@ -156,6 +156,7 @@ body {
   display: flex;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 /* ---- Sidebar ---- */
@@ -230,6 +231,7 @@ body {
   margin: 0 auto;
   padding: 32px 20px;
   min-width: 0;
+  overflow-y: auto;
 }
 
 /* ---- Alerts ---- */
