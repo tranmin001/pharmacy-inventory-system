@@ -17,7 +17,8 @@ function App() {
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [showPredictions, setShowPredictions] = useState(false);
+  const [activePanel, setActivePanel] = useState('inventory');
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
@@ -41,9 +42,7 @@ function App() {
   const [reorderSelected, setReorderSelected] = useState({});
   const [reorderNotes, setReorderNotes] = useState('');
   const [reorderLoading, setReorderLoading] = useState(false);
-  const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [orders, setOrders] = useState([]);
-  const [showCharts, setShowCharts] = useState(false);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('pharmtrack-dark-mode') === 'true');
   const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -51,7 +50,6 @@ function App() {
   const [expirationTo, setExpirationTo] = useState('');
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
-  const [showShipmentHistory, setShowShipmentHistory] = useState(false);
   const [shipmentHistory, setShipmentHistory] = useState([]);
 
   useEffect(() => {
@@ -73,6 +71,11 @@ function App() {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
     localStorage.setItem('pharmtrack-dark-mode', darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (activePanel === 'orders') fetchOrders();
+    if (activePanel === 'shipments') fetchShipmentHistory();
+  }, [activePanel]);
 
   const fetchMedications = async () => {
     try {
@@ -290,7 +293,7 @@ function App() {
       setShowShipmentModal(false);
       fetchMedications();
       fetchPredictions();
-      if (showShipmentHistory) fetchShipmentHistory();
+      if (activePanel === 'shipments') fetchShipmentHistory();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to process shipment');
     } finally {
@@ -557,6 +560,12 @@ function App() {
     setPriceMax('');
   };
 
+  const handleStatClick = (filter) => {
+    setActivePanel('inventory');
+    setStatusFilter(filter);
+    setShowFilters(true);
+  };
+
   const hasActiveFilters = statusFilter !== 'all' || expirationFrom || expirationTo || priceMin || priceMax;
 
   const getFilteredMedications = () => {
@@ -690,500 +699,525 @@ function App() {
         </div>
       </header>
 
-      <main className="main">
-        {error && <div className="alert alert-error">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
+      <div className="dashboard-layout">
+        <aside className="sidebar">
+          <nav className="sidebar-nav">
+            <button
+              className={`sidebar-nav-item${activePanel === 'inventory' ? ' sidebar-nav-active' : ''}`}
+              onClick={() => setActivePanel('inventory')}
+            >
+              <span className="sidebar-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </span>
+              <span className="sidebar-nav-label">Inventory</span>
+            </button>
+            <button
+              className={`sidebar-nav-item${activePanel === 'charts' ? ' sidebar-nav-active' : ''}`}
+              onClick={() => setActivePanel('charts')}
+            >
+              <span className="sidebar-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </span>
+              <span className="sidebar-nav-label">Analytics</span>
+            </button>
+            <button
+              className={`sidebar-nav-item${activePanel === 'predictions' ? ' sidebar-nav-active' : ''}`}
+              onClick={() => setActivePanel('predictions')}
+            >
+              <span className="sidebar-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </span>
+              <span className="sidebar-nav-label">AI Predictions</span>
+            </button>
+            <button
+              className={`sidebar-nav-item${activePanel === 'orders' ? ' sidebar-nav-active' : ''}`}
+              onClick={() => setActivePanel('orders')}
+            >
+              <span className="sidebar-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </span>
+              <span className="sidebar-nav-label">Orders</span>
+            </button>
+            <button
+              className={`sidebar-nav-item${activePanel === 'shipments' ? ' sidebar-nav-active' : ''}`}
+              onClick={() => setActivePanel('shipments')}
+            >
+              <span className="sidebar-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              </span>
+              <span className="sidebar-nav-label">Shipments</span>
+            </button>
+          </nav>
+        </aside>
 
-        <div className="toolbar">
-          <div className="toolbar-left">
-            <button 
-              className="btn btn-primary" 
-              onClick={() => {
-                setShowForm(!showForm);
-                setShowPredictions(false);
-                setEditingId(null);
-                setFormData({ name: '', quantity: '', expiration_date: '', price: '' });
-                setError('');
-              }}
-            >
-              {showForm ? 'Cancel' : '+ Add Medication'}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={openShipmentModal}
-            >
-              Receive Shipment
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={openReorderModal}
-            >
-              Generate Reorder
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setShowOrderHistory(!showOrderHistory);
-                setShowForm(false);
-                setShowPredictions(false);
-                if (!showOrderHistory) fetchOrders();
-              }}
-            >
-              {showOrderHistory ? 'Hide Orders' : 'Order History'}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setShowShipmentHistory(!showShipmentHistory);
-                setShowForm(false);
-                setShowPredictions(false);
-                setShowOrderHistory(false);
-                setShowCharts(false);
-                if (!showShipmentHistory) fetchShipmentHistory();
-              }}
-            >
-              {showShipmentHistory ? 'Hide Shipments' : 'Shipment History'}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setShowCharts(!showCharts);
-                setShowForm(false);
-                setShowPredictions(false);
-                setShowOrderHistory(false);
-              }}
-            >
-              {showCharts ? 'Hide Charts' : 'View Charts'}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setShowPredictions(!showPredictions);
-                setShowForm(false);
-                setShowOrderHistory(false);
-                setShowCharts(false);
-              }}
-            >
-              {showPredictions ? 'Hide Predictions' : 'View AI Predictions'}
-            </button>
-            <div className="export-group">
-              <button className="btn btn-secondary" onClick={exportInventoryPDF}>Export Inventory</button>
-              <button className="btn btn-secondary" onClick={exportReorderPDF}>Export Reorder</button>
-              <button className="btn btn-secondary" onClick={exportShipmentsPDF}>Export Shipments</button>
-            </div>
-          </div>
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search medications..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <button
-            className={`btn btn-secondary${showFilters ? ' btn-filter-active' : ''}`}
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            {showFilters ? 'Hide Filters' : 'Filters'}{hasActiveFilters ? ' *' : ''}
-          </button>
-          <div className="inventory-count">
-            {(searchTerm || hasActiveFilters)
-              ? `Showing ${filteredMedications.length} of ${medications.length}`
-              : `${medications.length} item${medications.length !== 1 ? 's' : ''} in inventory`}
-          </div>
-        </div>
+        <main className="main">
+          {error && <div className="alert alert-error">{error}</div>}
+          {success && <div className="alert alert-success">{success}</div>}
 
-        {showFilters && (
-          <div className="filter-panel">
-            <div className="filter-row">
-              <div className="filter-group">
-                <label>Status</label>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="all">All Statuses</option>
-                  <option value="ok">OK</option>
-                  <option value="low">Low Stock</option>
-                  <option value="expiring">Expiring Soon</option>
-                  <option value="expired">Expired</option>
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Expiration From</label>
-                <input type="date" value={expirationFrom} onChange={(e) => setExpirationFrom(e.target.value)} />
-              </div>
-              <div className="filter-group">
-                <label>Expiration To</label>
-                <input type="date" value={expirationTo} onChange={(e) => setExpirationTo(e.target.value)} />
-              </div>
-              <div className="filter-group">
-                <label>Min Price</label>
-                <input type="number" placeholder="$0" step="0.01" min="0" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
-              </div>
-              <div className="filter-group">
-                <label>Max Price</label>
-                <input type="number" placeholder="$10,000" step="0.01" min="0" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
-              </div>
-              {hasActiveFilters && (
-                <button className="btn btn-secondary btn-sm-action filter-clear" onClick={clearFilters}>Clear</button>
-              )}
-            </div>
+          <div className="stats-bar">
+            <button className="stat" onClick={() => handleStatClick('all')}>
+              <span className="stat-value">{medications.length}</span>
+              <span className="stat-label">Total</span>
+            </button>
+            <button className="stat stat-warning" onClick={() => handleStatClick('low')}>
+              <span className="stat-value">{medications.filter(m => isLowStock(m.quantity)).length}</span>
+              <span className="stat-label">Low Stock</span>
+            </button>
+            <button className="stat stat-danger" onClick={() => handleStatClick('expired')}>
+              <span className="stat-value">{medications.filter(m => isExpired(m.expiration_date)).length}</span>
+              <span className="stat-label">Expired</span>
+            </button>
+            <button className="stat stat-alert" onClick={() => handleStatClick('expiring')}>
+              <span className="stat-value">{medications.filter(m => isExpiringSoon(m.expiration_date)).length}</span>
+              <span className="stat-label">Expiring Soon</span>
+            </button>
           </div>
-        )}
 
-        {showForm && (
-          <div className="form-card">
-            <h2>{editingId ? 'Edit Medication' : 'Add New Medication'}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Medication Name & Strength *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Amoxicillin 500mg"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  maxLength={100}
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Quantity * (1-1000)</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    min="1"
-                    max="1000"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Price * ($0.01 - $10,000)</label>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0.01"
-                    max="10000"
-                    value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Expiration Date * (must be within 5 years)</label>
-                <input
-                  type="date"
-                  min={editingId ? undefined : getMinDate()}
-                  max={getMaxDate()}
-                  value={formData.expiration_date}
-                  onChange={(e) => setFormData({...formData, expiration_date: e.target.value})}
-                />
-              </div>
-              <button type="submit" className="btn btn-primary btn-block">
-                {editingId ? 'Update Medication' : 'Add to Inventory'}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {showPredictions && (
-          <div className="predictions-panel">
-            <h2>AI-Powered Inventory Predictions</h2>
-            <p className="predictions-subtitle">Using machine learning to predict stockouts based on usage patterns</p>
-            <div className="predictions-grid">
-              {predictions.map((pred) => (
-                <div key={pred.medication_id} className="prediction-card">
-                  <div className="prediction-header">
-                    <h3>{pred.medication_name}</h3>
-                    <span 
-                      className="risk-badge"
-                      style={{ backgroundColor: getRiskColor(pred.risk_level) }}
+          {activePanel === 'inventory' && (
+            <>
+              <div className="toolbar">
+                <div className="toolbar-left">
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setShowForm(!showForm);
+                      setEditingId(null);
+                      setFormData({ name: '', quantity: '', expiration_date: '', price: '' });
+                      setError('');
+                    }}
+                  >
+                    {showForm ? 'Cancel' : '+ Add Medication'}
+                  </button>
+                  <button className="btn btn-secondary" onClick={openShipmentModal}>
+                    Receive Shipment
+                  </button>
+                  <button className="btn btn-secondary" onClick={openReorderModal}>
+                    Generate Reorder
+                  </button>
+                  <div className="export-dropdown-wrapper">
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => setShowExportMenu(!showExportMenu)}
                     >
-                      {pred.risk_level}
-                    </span>
-                  </div>
-                  <div className="prediction-body">
-                    <div className="prediction-stat">
-                      <span className="stat-label">Current Stock</span>
-                      <span className="stat-value">{pred.current_quantity} units</span>
-                    </div>
-                    <div className="prediction-stat">
-                      <span className="stat-label">Avg Daily Usage</span>
-                      <span className="stat-value">{pred.avg_daily_usage} units/day</span>
-                    </div>
-                    <div className="prediction-stat">
-                      <span className="stat-label">Days Until Stockout</span>
-                      <span className="stat-value" style={{ color: getRiskColor(pred.risk_level) }}>
-                        {pred.days_until_stockout} days
-                      </span>
-                    </div>
-                    <div className="prediction-stat">
-                      <span className="stat-label">Predicted Stockout</span>
-                      <span className="stat-value">{pred.predicted_stockout_date}</span>
-                    </div>
-                    <div className="prediction-stat highlight">
-                      <span className="stat-label">Reorder By</span>
-                      <span className="stat-value">{pred.recommended_reorder_date}</span>
-                    </div>
-                    <div className="prediction-stat highlight">
-                      <span className="stat-label">Recommended Order</span>
-                      <span className="stat-value">{pred.recommended_order_quantity} units</span>
-                    </div>
-                    {pred.expires_before_stockout && (
-                      <div className="prediction-stat" style={{ background: 'var(--danger-light)', margin: '0 -16px', padding: '10px 16px', borderRadius: '0 0 var(--radius) var(--radius)', marginBottom: '-16px' }}>
-                        <span className="stat-label" style={{ color: 'var(--danger)', fontWeight: 600 }}>Expires before stockout</span>
-                        <span className="stat-value" style={{ color: 'var(--danger)' }}>Replacement needed</span>
+                      Export {showExportMenu ? '▴' : '▾'}
+                    </button>
+                    {showExportMenu && (
+                      <div className="export-dropdown">
+                        <button className="export-dropdown-item" onClick={() => { exportInventoryPDF(); setShowExportMenu(false); }}>
+                          Inventory Report
+                        </button>
+                        <button className="export-dropdown-item" onClick={() => { exportReorderPDF(); setShowExportMenu(false); }}>
+                          Reorder List
+                        </button>
+                        <button className="export-dropdown-item" onClick={() => { exportShipmentsPDF(); setShowExportMenu(false); }}>
+                          Shipment History
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Search medications..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <button
+                  className={`btn btn-secondary${showFilters ? ' btn-filter-active' : ''}`}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  {showFilters ? 'Hide Filters' : 'Filters'}{hasActiveFilters ? ' *' : ''}
+                </button>
+                <div className="inventory-count">
+                  {(searchTerm || hasActiveFilters)
+                    ? `Showing ${filteredMedications.length} of ${medications.length}`
+                    : `${medications.length} item${medications.length !== 1 ? 's' : ''} in inventory`}
+                </div>
+              </div>
 
-        {showOrderHistory && (
-          <div className="predictions-panel">
-            <h2>Order History</h2>
-            <p className="predictions-subtitle">Track reorder status from pending to received</p>
-            {orders.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No orders yet. Use "Generate Reorder" to create one.</p>
-            ) : (
-              <div className="orders-list">
-                {orders.map(order => (
-                  <div key={order.order_id} className="order-card">
-                    <div className="order-header">
-                      <div>
-                        <strong>{order.order_id}</strong>
-                        <span className="order-date">{order.created_at}</span>
+              {showFilters && (
+                <div className="filter-panel">
+                  <div className="filter-row">
+                    <div className="filter-group">
+                      <label>Status</label>
+                      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                        <option value="all">All Statuses</option>
+                        <option value="ok">OK</option>
+                        <option value="low">Low Stock</option>
+                        <option value="expiring">Expiring Soon</option>
+                        <option value="expired">Expired</option>
+                      </select>
+                    </div>
+                    <div className="filter-group">
+                      <label>Expiration From</label>
+                      <input type="date" value={expirationFrom} onChange={(e) => setExpirationFrom(e.target.value)} />
+                    </div>
+                    <div className="filter-group">
+                      <label>Expiration To</label>
+                      <input type="date" value={expirationTo} onChange={(e) => setExpirationTo(e.target.value)} />
+                    </div>
+                    <div className="filter-group">
+                      <label>Min Price</label>
+                      <input type="number" placeholder="$0" step="0.01" min="0" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
+                    </div>
+                    <div className="filter-group">
+                      <label>Max Price</label>
+                      <input type="number" placeholder="$10,000" step="0.01" min="0" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
+                    </div>
+                    {hasActiveFilters && (
+                      <button className="btn btn-secondary btn-sm-action filter-clear" onClick={clearFilters}>Clear</button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {showForm && (
+                <div className="form-card">
+                  <h2>{editingId ? 'Edit Medication' : 'Add New Medication'}</h2>
+                  <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                      <label>Medication Name & Strength *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Amoxicillin 500mg"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        maxLength={100}
+                      />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Quantity * (1-1000)</label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          min="1"
+                          max="1000"
+                          value={formData.quantity}
+                          onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                        />
                       </div>
-                      <div className="order-header-right">
-                        <span className={`badge badge-order-${order.status}`}>{order.status}</span>
-                        {order.status === 'pending' && (
-                          <button className="btn-sm btn-edit" onClick={() => handleUpdateOrderStatus(order.order_id, 'submitted')}>Mark Submitted</button>
-                        )}
-                        {order.status === 'submitted' && (
-                          <button className="btn-sm btn-edit" onClick={() => handleUpdateOrderStatus(order.order_id, 'received')}>Mark Received</button>
-                        )}
+                      <div className="form-group">
+                        <label>Price * ($0.01 - $10,000)</label>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0.01"
+                          max="10000"
+                          value={formData.price}
+                          onChange={(e) => setFormData({...formData, price: e.target.value})}
+                        />
                       </div>
                     </div>
-                    {order.notes && <div className="order-notes">{order.notes}</div>}
-                    <table className="modal-table">
-                      <thead>
-                        <tr>
-                          <th>Medication</th>
-                          <th>Current Qty</th>
-                          <th>Order Qty</th>
-                          <th>Reason</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {order.items.map((item, i) => (
-                          <tr key={i}>
-                            <td>{item.medication_name}</td>
-                            <td>{item.current_quantity}</td>
-                            <td><strong>{item.order_quantity}</strong></td>
-                            <td>
-                              {item.reason.split(', ').map((r, j) => (
-                                <span key={j} className="badge badge-low" style={{ marginRight: '4px', fontSize: '0.65rem' }}>{r}</span>
-                              ))}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                    <div className="form-group">
+                      <label>Expiration Date * (must be within 5 years)</label>
+                      <input
+                        type="date"
+                        min={editingId ? undefined : getMinDate()}
+                        max={getMaxDate()}
+                        value={formData.expiration_date}
+                        onChange={(e) => setFormData({...formData, expiration_date: e.target.value})}
+                      />
+                    </div>
+                    <button type="submit" className="btn btn-primary btn-block">
+                      {editingId ? 'Update Medication' : 'Add to Inventory'}
+                    </button>
+                  </form>
+                </div>
+              )}
 
-        {showShipmentHistory && (
-          <div className="predictions-panel">
-            <h2>Shipment History</h2>
-            <p className="predictions-subtitle">Record of all received shipments and their line items</p>
-            {shipmentHistory.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No shipments received yet. Use "Receive Shipment" to log one.</p>
-            ) : (
-              <div className="orders-list">
-                {shipmentHistory.map(shipment => (
-                  <div key={shipment.shipment_id} className="order-card">
-                    <div className="order-header">
-                      <div>
-                        <strong>{shipment.shipment_id}</strong>
-                        <span className="order-date">{shipment.supplier_name}</span>
+              {medications.length === 0 ? (
+                <div className="empty-state">
+                  <p>No medications in inventory</p>
+                  <span>Click "+ Add Medication" to get started</span>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="med-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Medication</th>
+                        <th>Quantity</th>
+                        <th>Expiration</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMedications.map((med) => (
+                        <tr key={med.id} className={isExpired(med.expiration_date) ? 'row-expired' : ''}>
+                          <td className="id-cell">#{med.id}</td>
+                          <td className="name-cell">{med.name}</td>
+                          <td className={isLowStock(med.quantity) ? 'low-stock' : ''}>{med.quantity}</td>
+                          <td>{med.expiration_date}</td>
+                          <td>${parseFloat(med.price).toFixed(2)}</td>
+                          <td className="status-cell">
+                            {isExpired(med.expiration_date) && <span className="badge badge-expired">Expired</span>}
+                            {isExpiringSoon(med.expiration_date) && <span className="badge badge-warning">Expiring Soon</span>}
+                            {isLowStock(med.quantity) && <span className="badge badge-low">Low Stock</span>}
+                            {!isExpired(med.expiration_date) && !isExpiringSoon(med.expiration_date) && !isLowStock(med.quantity) &&
+                              <span className="badge badge-ok">OK</span>}
+                          </td>
+                          <td className="actions-cell">
+                            <button className="btn-sm btn-edit" onClick={() => handleEdit(med)}>Edit</button>
+                            <button className="btn-sm btn-delete" onClick={() => handleDelete(med.id, med.name)}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {activePanel === 'charts' && medications.length > 0 && (
+            <div className="predictions-panel">
+              <h2>Inventory Analytics</h2>
+              <p className="predictions-subtitle">Visual overview of stock levels, expiration timeline, and inventory value</p>
+              <div className="charts-grid">
+                <div className="chart-card">
+                  <h3 className="chart-title">Stock Levels</h3>
+                  <p className="chart-subtitle">Sorted by quantity (lowest first)</p>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={getStockChartData()} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
+                      <YAxis fontSize={12} tick={{ fill: '#64748B' }} />
+                      <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} />
+                      <Bar dataKey="quantity" radius={[4, 4, 0, 0]}>
+                        {getStockChartData().map((entry, index) => (
+                          <Cell key={index} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="chart-legend">
+                    <span className="legend-item"><span className="legend-dot" style={{ background: '#DC2626' }}></span>Critical (&lt;10)</span>
+                    <span className="legend-item"><span className="legend-dot" style={{ background: '#D97706' }}></span>Low (&lt;30)</span>
+                    <span className="legend-item"><span className="legend-dot" style={{ background: '#0D9488' }}></span>Healthy</span>
+                  </div>
+                </div>
+
+                <div className="chart-card">
+                  <h3 className="chart-title">Expiration Timeline</h3>
+                  <p className="chart-subtitle">Days until expiration (soonest first)</p>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={getExpirationData()} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
+                      <YAxis fontSize={12} tick={{ fill: '#64748B' }} label={{ value: 'Days', angle: -90, position: 'insideLeft', fontSize: 12, fill: '#94A3B8' }} />
+                      <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} formatter={(value) => [`${value} days`, 'Days Left']} />
+                      <Bar dataKey="days" radius={[4, 4, 0, 0]}>
+                        {getExpirationData().map((entry, index) => (
+                          <Cell key={index} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="chart-legend">
+                    <span className="legend-item"><span className="legend-dot" style={{ background: '#DC2626' }}></span>This week</span>
+                    <span className="legend-item"><span className="legend-dot" style={{ background: '#D97706' }}></span>This month</span>
+                    <span className="legend-item"><span className="legend-dot" style={{ background: '#7c3aed' }}></span>3 months</span>
+                    <span className="legend-item"><span className="legend-dot" style={{ background: '#0D9488' }}></span>Later</span>
+                  </div>
+                </div>
+
+                <div className="chart-card chart-card-full">
+                  <h3 className="chart-title">Inventory Value</h3>
+                  <p className="chart-subtitle">Total value per medication (quantity x price)</p>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={getValueChartData()} margin={{ top: 10, right: 20, left: 10, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
+                      <YAxis fontSize={12} tick={{ fill: '#64748B' }} tickFormatter={(v) => `$${v}`} />
+                      <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} formatter={(value) => [`$${value.toFixed(2)}`, 'Value']} />
+                      <Bar dataKey="value" fill="#0D9488" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'charts' && medications.length === 0 && (
+            <div className="empty-state">
+              <p>No data to visualize</p>
+              <span>Add medications to see analytics</span>
+            </div>
+          )}
+
+          {activePanel === 'predictions' && (
+            <div className="predictions-panel">
+              <h2>AI-Powered Inventory Predictions</h2>
+              <p className="predictions-subtitle">Using machine learning to predict stockouts based on usage patterns</p>
+              <div className="predictions-grid">
+                {predictions.map((pred) => (
+                  <div key={pred.medication_id} className="prediction-card">
+                    <div className="prediction-header">
+                      <h3>{pred.medication_name}</h3>
+                      <span
+                        className="risk-badge"
+                        style={{ backgroundColor: getRiskColor(pred.risk_level) }}
+                      >
+                        {pred.risk_level}
+                      </span>
+                    </div>
+                    <div className="prediction-body">
+                      <div className="prediction-stat">
+                        <span className="stat-label">Current Stock</span>
+                        <span className="stat-value">{pred.current_quantity} units</span>
                       </div>
-                      <div className="order-header-right">
-                        <span className="badge badge-ok">{shipment.date_received}</span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          {shipment.total_items} units — ${parseFloat(shipment.total_value).toFixed(2)}
+                      <div className="prediction-stat">
+                        <span className="stat-label">Avg Daily Usage</span>
+                        <span className="stat-value">{pred.avg_daily_usage} units/day</span>
+                      </div>
+                      <div className="prediction-stat">
+                        <span className="stat-label">Days Until Stockout</span>
+                        <span className="stat-value" style={{ color: getRiskColor(pred.risk_level) }}>
+                          {pred.days_until_stockout} days
                         </span>
                       </div>
+                      <div className="prediction-stat">
+                        <span className="stat-label">Predicted Stockout</span>
+                        <span className="stat-value">{pred.predicted_stockout_date}</span>
+                      </div>
+                      <div className="prediction-stat highlight">
+                        <span className="stat-label">Reorder By</span>
+                        <span className="stat-value">{pred.recommended_reorder_date}</span>
+                      </div>
+                      <div className="prediction-stat highlight">
+                        <span className="stat-label">Recommended Order</span>
+                        <span className="stat-value">{pred.recommended_order_quantity} units</span>
+                      </div>
+                      {pred.expires_before_stockout && (
+                        <div className="prediction-stat" style={{ background: 'var(--danger-light)', margin: '0 -16px', padding: '10px 16px', borderRadius: '0 0 var(--radius) var(--radius)', marginBottom: '-16px' }}>
+                          <span className="stat-label" style={{ color: 'var(--danger)', fontWeight: 600 }}>Expires before stockout</span>
+                          <span className="stat-value" style={{ color: 'var(--danger)' }}>Replacement needed</span>
+                        </div>
+                      )}
                     </div>
-                    <table className="modal-table">
-                      <thead>
-                        <tr>
-                          <th>Medication</th>
-                          <th>Qty</th>
-                          <th>Expiration</th>
-                          <th>Price</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {shipment.items.map((item, i) => (
-                          <tr key={i}>
-                            <td>{item.medication_name}</td>
-                            <td>{item.quantity}</td>
-                            <td>{item.expiration_date}</td>
-                            <td>${parseFloat(item.price).toFixed(2)}</td>
-                            <td>
-                              <span className={`badge ${item.action === 'created' ? 'badge-ok' : 'badge-low'}`}>
-                                {item.action}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        )}
-
-        {showCharts && medications.length > 0 && (
-          <div className="predictions-panel">
-            <h2>Inventory Analytics</h2>
-            <p className="predictions-subtitle">Visual overview of stock levels, expiration timeline, and inventory value</p>
-            <div className="charts-grid">
-              <div className="chart-card">
-                <h3 className="chart-title">Stock Levels</h3>
-                <p className="chart-subtitle">Sorted by quantity (lowest first)</p>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={getStockChartData()} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
-                    <YAxis fontSize={12} tick={{ fill: '#64748B' }} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} />
-                    <Bar dataKey="quantity" radius={[4, 4, 0, 0]}>
-                      {getStockChartData().map((entry, index) => (
-                        <Cell key={index} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="chart-legend">
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#DC2626' }}></span>Critical (&lt;10)</span>
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#D97706' }}></span>Low (&lt;30)</span>
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#0D9488' }}></span>Healthy</span>
-                </div>
-              </div>
-
-              <div className="chart-card">
-                <h3 className="chart-title">Expiration Timeline</h3>
-                <p className="chart-subtitle">Days until expiration (soonest first)</p>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={getExpirationData()} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
-                    <YAxis fontSize={12} tick={{ fill: '#64748B' }} label={{ value: 'Days', angle: -90, position: 'insideLeft', fontSize: 12, fill: '#94A3B8' }} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} formatter={(value) => [`${value} days`, 'Days Left']} />
-                    <Bar dataKey="days" radius={[4, 4, 0, 0]}>
-                      {getExpirationData().map((entry, index) => (
-                        <Cell key={index} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="chart-legend">
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#DC2626' }}></span>This week</span>
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#D97706' }}></span>This month</span>
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#7c3aed' }}></span>3 months</span>
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#0D9488' }}></span>Later</span>
-                </div>
-              </div>
-
-              <div className="chart-card chart-card-full">
-                <h3 className="chart-title">Inventory Value</h3>
-                <p className="chart-subtitle">Total value per medication (quantity x price)</p>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={getValueChartData()} margin={{ top: 10, right: 20, left: 10, bottom: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={11} tick={{ fill: '#64748B' }} interval={0} />
-                    <YAxis fontSize={12} tick={{ fill: '#64748B' }} tickFormatter={(v) => `$${v}`} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem' }} formatter={(value) => [`$${value.toFixed(2)}`, 'Value']} />
-                    <Bar dataKey="value" fill="#0D9488" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="stats-bar">
-          <div className="stat">
-            <span className="stat-value">{medications.length}</span>
-            <span className="stat-label">Total</span>
-          </div>
-          <div className="stat stat-warning">
-            <span className="stat-value">{medications.filter(m => isLowStock(m.quantity)).length}</span>
-            <span className="stat-label">Low Stock</span>
-          </div>
-          <div className="stat stat-danger">
-            <span className="stat-value">{medications.filter(m => isExpired(m.expiration_date)).length}</span>
-            <span className="stat-label">Expired</span>
-          </div>
-          <div className="stat stat-alert">
-            <span className="stat-value">{medications.filter(m => isExpiringSoon(m.expiration_date)).length}</span>
-            <span className="stat-label">Expiring Soon</span>
-          </div>
-        </div>
+          {activePanel === 'orders' && (
+            <div className="predictions-panel">
+              <h2>Order History</h2>
+              <p className="predictions-subtitle">Track reorder status from pending to received</p>
+              {orders.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No orders yet. Use "Generate Reorder" to create one.</p>
+              ) : (
+                <div className="orders-list">
+                  {orders.map(order => (
+                    <div key={order.order_id} className="order-card">
+                      <div className="order-header">
+                        <div>
+                          <strong>{order.order_id}</strong>
+                          <span className="order-date">{order.created_at}</span>
+                        </div>
+                        <div className="order-header-right">
+                          <span className={`badge badge-order-${order.status}`}>{order.status}</span>
+                          {order.status === 'pending' && (
+                            <button className="btn-sm btn-edit" onClick={() => handleUpdateOrderStatus(order.order_id, 'submitted')}>Mark Submitted</button>
+                          )}
+                          {order.status === 'submitted' && (
+                            <button className="btn-sm btn-edit" onClick={() => handleUpdateOrderStatus(order.order_id, 'received')}>Mark Received</button>
+                          )}
+                        </div>
+                      </div>
+                      {order.notes && <div className="order-notes">{order.notes}</div>}
+                      <table className="modal-table">
+                        <thead>
+                          <tr>
+                            <th>Medication</th>
+                            <th>Current Qty</th>
+                            <th>Order Qty</th>
+                            <th>Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {order.items.map((item, i) => (
+                            <tr key={i}>
+                              <td>{item.medication_name}</td>
+                              <td>{item.current_quantity}</td>
+                              <td><strong>{item.order_quantity}</strong></td>
+                              <td>
+                                {item.reason.split(', ').map((r, j) => (
+                                  <span key={j} className="badge badge-low" style={{ marginRight: '4px', fontSize: '0.65rem' }}>{r}</span>
+                                ))}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-        {medications.length === 0 ? (
-          <div className="empty-state">
-            <p>No medications in inventory</p>
-            <span>Click "Add Medication" to get started</span>
-          </div>
-        ) : (
-          <div className="table-container">
-            <table className="med-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Medication</th>
-                  <th>Quantity</th>
-                  <th>Expiration</th>
-                  <th>Price</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMedications.map((med) => (
-                  <tr key={med.id} className={isExpired(med.expiration_date) ? 'row-expired' : ''}>
-                    <td className="id-cell">#{med.id}</td>
-                    <td className="name-cell">{med.name}</td>
-                    <td className={isLowStock(med.quantity) ? 'low-stock' : ''}>{med.quantity}</td>
-                    <td>{med.expiration_date}</td>
-                    <td>${parseFloat(med.price).toFixed(2)}</td>
-                    <td className="status-cell">
-                      {isExpired(med.expiration_date) && <span className="badge badge-expired">Expired</span>}
-                      {isExpiringSoon(med.expiration_date) && <span className="badge badge-warning">Expiring Soon</span>}
-                      {isLowStock(med.quantity) && <span className="badge badge-low">Low Stock</span>}
-                      {!isExpired(med.expiration_date) && !isExpiringSoon(med.expiration_date) && !isLowStock(med.quantity) && 
-                        <span className="badge badge-ok">OK</span>}
-                    </td>
-                    <td className="actions-cell">
-                      <button className="btn-sm btn-edit" onClick={() => handleEdit(med)}>Edit</button>
-                      <button className="btn-sm btn-delete" onClick={() => handleDelete(med.id, med.name)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+          {activePanel === 'shipments' && (
+            <div className="predictions-panel">
+              <h2>Shipment History</h2>
+              <p className="predictions-subtitle">Record of all received shipments and their line items</p>
+              {shipmentHistory.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No shipments received yet. Use "Receive Shipment" to log one.</p>
+              ) : (
+                <div className="orders-list">
+                  {shipmentHistory.map(shipment => (
+                    <div key={shipment.shipment_id} className="order-card">
+                      <div className="order-header">
+                        <div>
+                          <strong>{shipment.shipment_id}</strong>
+                          <span className="order-date">{shipment.supplier_name}</span>
+                        </div>
+                        <div className="order-header-right">
+                          <span className="badge badge-ok">{shipment.date_received}</span>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            {shipment.total_items} units - ${parseFloat(shipment.total_value).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      <table className="modal-table">
+                        <thead>
+                          <tr>
+                            <th>Medication</th>
+                            <th>Qty</th>
+                            <th>Expiration</th>
+                            <th>Price</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {shipment.items.map((item, i) => (
+                            <tr key={i}>
+                              <td>{item.medication_name}</td>
+                              <td>{item.quantity}</td>
+                              <td>{item.expiration_date}</td>
+                              <td>${parseFloat(item.price).toFixed(2)}</td>
+                              <td>
+                                <span className={`badge ${item.action === 'created' ? 'badge-ok' : 'badge-low'}`}>
+                                  {item.action}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         {showReorderModal && (
           <div className="modal-overlay" onClick={() => setShowReorderModal(false)}>
             <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
@@ -1399,10 +1433,11 @@ function App() {
             </div>
           </div>
         )}
-      </main>
+        </main>
+      </div>
 
       <footer className="footer">
-        <p>PharmTrack v1.0 — Built for Safeway Pharmacy workflow optimization</p>
+        <p>PharmTrack v1.0 - Built for Safeway Pharmacy workflow optimization</p>
       </footer>
     </div>
   );
