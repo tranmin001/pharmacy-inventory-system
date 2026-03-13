@@ -4,15 +4,15 @@ import './LandingPage.css';
 const FEATURES = [
   {
     title: 'Inventory Management',
-    desc: 'Add, edit, delete, and search medications. Receive batch shipments to restock efficiently.',
+    desc: 'Add, edit, delete, and search medications. Receive batch shipments to restock in bulk.',
   },
   {
     title: 'Stockout Prediction',
-    desc: 'ML model analyzes usage patterns and flags medications at critical, high, or medium risk of running out.',
+    desc: 'Predicts which medications will run out and when, ranked by risk level so you know what to reorder first.',
   },
   {
     title: 'Order Workflow',
-    desc: 'Auto-generated reorder suggestions based on stock levels, with order tracking and supplier info.',
+    desc: 'Suggests what to reorder based on current stock, with built-in order tracking and supplier details.',
   },
   {
     title: 'Reporting & Analytics',
@@ -28,9 +28,9 @@ const TECH_STACK = [
 ];
 
 const HIGHLIGHTS = [
-  'Multi-tier architecture: C++ core, Python API, React frontend sharing a single database',
-  'ML-powered stockout predictions with risk level alerts',
-  'Batch shipment receiving for efficient restocking',
+  'Three-layer architecture with C++, Python, and React all sharing one SQLite database',
+  'Stockout predictions using machine learning, with risk level alerts',
+  'Batch shipment receiving to restock multiple items at once',
   'PDF report generation for inventory documentation',
 ];
 
@@ -55,7 +55,7 @@ export default function LandingPage({ onEnterApp }) {
 
   return (
     <div className="lp-page">
-      {/* ── Hero ── */}
+      {/* Hero */}
       <section className="lp-hero">
         <div className="lp-hero-inner">
           <span className="lp-accent-bar lp-reveal lp-stagger-1 lp-visible" />
@@ -64,10 +64,9 @@ export default function LandingPage({ onEnterApp }) {
             <span style={{ color: 'var(--lp-accent)' }}>built by a pharmacy tech</span>
           </h1>
           <p className="lp-hero-subtitle lp-reveal lp-stagger-3 lp-visible">
-            I built PharmTrack after experiencing inventory challenges firsthand as a pharmacy
-            technician at Safeway. It combines real-world pharmacy workflow knowledge with modern
-            software engineering — featuring ML-powered stockout predictions and automated reorder
-            workflows.
+            I built PharmTrack while working as a pharmacy technician at Safeway, where I saw
+            firsthand how much time gets lost to manual inventory tracking. It uses machine
+            learning to predict stockouts before they happen and automates the reorder process.
           </p>
           <button className="lp-cta lp-reveal lp-stagger-4 lp-visible" onClick={onEnterApp}>
             Enter Dashboard <span className="lp-cta-arrow">&rarr;</span>
@@ -75,7 +74,7 @@ export default function LandingPage({ onEnterApp }) {
         </div>
       </section>
 
-      {/* ── Features ── */}
+      {/* Features */}
       <section className="lp-features">
         <p className="lp-section-label lp-reveal">Features</p>
         <h2 className="lp-section-title lp-reveal">What it does</h2>
@@ -89,7 +88,7 @@ export default function LandingPage({ onEnterApp }) {
         </div>
       </section>
 
-      {/* ── Tech Stack ── */}
+      {/* Tech Stack */}
       <section className="lp-tech">
         <p className="lp-section-label lp-reveal">Architecture</p>
         <h2 className="lp-section-title lp-reveal">How it's built</h2>
@@ -107,15 +106,15 @@ export default function LandingPage({ onEnterApp }) {
         </div>
       </section>
 
-      {/* ── About ── */}
+      {/* About */}
       <section className="lp-about">
         <p className="lp-section-label lp-reveal">About</p>
         <h2 className="lp-section-title lp-reveal">Project context</h2>
         <p className="lp-about-text lp-reveal">
-          PharmTrack started from a real problem I observed while working as a pharmacy technician.
-          I wanted to apply what I'm learning as a Computer Science student at UW Bothell to solve it.
-          This project demonstrates full-stack development across C++, Python, and React — all sharing
-          a single SQLite database.
+          PharmTrack started from a real problem I noticed while working as a pharmacy technician.
+          I wanted to apply what I'm learning as a Computer Science student at UW Bothell to build
+          something useful. The result is a full-stack app spanning C++, Python, and React, all
+          connected to a single SQLite database.
         </p>
         <p className="lp-highlights-label lp-reveal">Project Highlights</p>
         <ul className="lp-highlights lp-reveal">
