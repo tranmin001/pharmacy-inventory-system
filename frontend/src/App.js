@@ -72,6 +72,7 @@ function App() {
   useEffect(() => {
     fetchMedications();
     fetchPredictions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -82,6 +83,7 @@ function App() {
   useEffect(() => {
     if (activePanel === 'orders') fetchOrders();
     if (activePanel === 'shipments') fetchShipmentHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePanel]);
 
   useEffect(() => {
@@ -120,6 +122,7 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showLanding, showForm, showShipmentModal, showReorderModal]);
 
   const fetchMedications = async () => {
