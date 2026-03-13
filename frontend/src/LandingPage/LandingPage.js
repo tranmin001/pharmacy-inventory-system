@@ -174,7 +174,7 @@ export default function LandingPage({ onEnterApp }) {
           <div className="lp-footer-brand">
             <span className="lp-footer-logo">PharmTrack</span>
             <p className="lp-footer-tagline">
-              Built by a pharmacy tech turned software engineer.
+              Built by a software engineering student with pharmacy experience.
             </p>
           </div>
           <div className="lp-footer-links">
@@ -200,7 +200,7 @@ export default function LandingPage({ onEnterApp }) {
           </div>
         </div>
         <div className="lp-footer-bottom">
-          <p>&copy; {new Date().getFullYear()} PharmTrack. Trung Tran.</p>
+          <p>&copy; {new Date().getFullYear()} Minh Tran, PharmTrack</p>
         </div>
       </footer>
     </div>
