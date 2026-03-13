@@ -277,9 +277,101 @@
   line-height: 1.65;
 }
 
-/* ══════════════════════════════════
+/* ==============================
+   DASHBOARD PREVIEW SECTION
+   ============================== */
+.lp-preview {
+  background: var(--lp-bg-dark);
+  padding: 100px 10vw;
+}
+
+.lp-preview .lp-section-title {
+  color: var(--lp-text-light);
+}
+
+.lp-browser-frame {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+  max-width: 960px;
+}
+
+.lp-browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #1E293B;
+  border-bottom: 1px solid #334155;
+}
+
+.lp-browser-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #334155;
+}
+
+.lp-browser-dot:first-child {
+  background: #EF4444;
+}
+
+.lp-browser-dot:nth-child(2) {
+  background: #F59E0B;
+}
+
+.lp-browser-dot:nth-child(3) {
+  background: #10B981;
+}
+
+.lp-browser-url {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--lp-text-muted);
+  margin-left: 12px;
+}
+
+.lp-browser-content {
+  background: #0F172A;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-preview-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.lp-preview-placeholder {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 80px 40px;
+  width: 100%;
+}
+
+.lp-preview-placeholder p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--lp-text-muted);
+  margin: 0;
+}
+
+.lp-preview-caption {
+  font-size: 0.9rem;
+  color: var(--lp-text-muted);
+  margin: 24px 0 0;
+  text-align: center;
+  max-width: 960px;
+}
+
+/* ==============================
    TECH STACK SECTION
-   ══════════════════════════════════ */
+   ============================== */
 .lp-tech {
   background: var(--lp-bg-dark);
   padding: 100px 10vw;
@@ -325,9 +417,83 @@
   padding: 4px 0;
 }
 
-/* ══════════════════════════════════
+/* ==============================
+   USE CASES SECTION
+   ============================== */
+.lp-usecases {
+  background: var(--lp-card-bg);
+  padding: 100px 10vw;
+}
+
+.lp-usecases .lp-section-title {
+  color: var(--lp-bg-dark);
+}
+
+.lp-usecases-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 800px;
+}
+
+.lp-usecase {
+  border: 1px solid var(--lp-card-border);
+  border-radius: 8px;
+  padding: 28px 32px;
+  background: var(--lp-white);
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+
+.lp-usecase:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.lp-usecase-scenario {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--lp-bg-dark);
+  margin: 0 0 16px;
+}
+
+.lp-usecase-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.lp-usecase-problem,
+.lp-usecase-solution {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-usecase-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #DC2626;
+}
+
+.lp-usecase-tag-solution {
+  color: var(--lp-accent);
+}
+
+.lp-usecase-problem p,
+.lp-usecase-solution p {
+  font-size: 0.9rem;
+  color: #475569;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ==============================
    ABOUT SECTION
-   ══════════════════════════════════ */
+   ============================== */
 .lp-about {
   background: var(--lp-about-bg);
   padding: 100px 10vw;
@@ -521,6 +687,24 @@
   color: var(--lp-text-light);
 }
 
+[data-theme="dark"] .lp-usecases {
+  background: #1E293B;
+}
+
+[data-theme="dark"] .lp-usecase {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .lp-usecase-scenario {
+  color: var(--lp-text-light);
+}
+
+[data-theme="dark"] .lp-usecase-problem p,
+[data-theme="dark"] .lp-usecase-solution p {
+  color: var(--lp-text-muted);
+}
+
 [data-theme="dark"] .lp-about {
   background: #1E293B;
 }
@@ -560,7 +744,9 @@
   }
 
   .lp-features,
+  .lp-preview,
   .lp-tech,
+  .lp-usecases,
   .lp-about {
     padding: 72px 6vw;
   }
@@ -573,6 +759,11 @@
   .lp-tech-grid {
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+  }
+
+  .lp-usecase-body {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .lp-section-title {
@@ -624,7 +815,9 @@
   }
 
   .lp-features,
+  .lp-preview,
   .lp-tech,
+  .lp-usecases,
   .lp-about {
     padding: 56px 5vw;
   }

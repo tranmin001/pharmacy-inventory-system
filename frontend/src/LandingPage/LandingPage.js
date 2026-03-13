@@ -33,6 +33,29 @@ const TECH_STACK = [
   { layer: 'Intelligence', items: ['scikit-learn', 'Pandas', 'NumPy'] },
 ];
 
+const USE_CASES = [
+  {
+    scenario: 'End-of-day inventory count',
+    problem: 'Manually counting stock and cross-referencing paper logs takes 30+ minutes and is error-prone.',
+    solution: 'PharmTrack shows real-time quantities with search and filtering. Discrepancies are visible instantly.',
+  },
+  {
+    scenario: 'Catching expired medications',
+    problem: 'Expired stock sitting on shelves is a compliance risk. Checking dates by hand is easy to miss.',
+    solution: 'The expired medications view flags everything past its date automatically, so nothing slips through.',
+  },
+  {
+    scenario: 'Restocking before you run out',
+    problem: 'You only realize a medication is out of stock when a patient needs it.',
+    solution: 'ML predictions flag at-risk medications days in advance, ranked by urgency so you reorder in time.',
+  },
+  {
+    scenario: 'Receiving a shipment',
+    problem: 'Updating inventory item by item after a delivery is slow and interrupts the workflow.',
+    solution: 'Batch receiving lets you log an entire shipment at once with supplier tracking built in.',
+  },
+];
+
 const HIGHLIGHTS = [
   'Three-layer architecture with C++, Python, and React all sharing one SQLite database',
   'Stockout predictions using machine learning, with risk level alerts',
@@ -119,6 +142,38 @@ export default function LandingPage({ onEnterApp }) {
         </div>
       </section>
 
+      {/* Dashboard Preview */}
+      <section className="lp-preview" id="preview">
+        <p className="lp-section-label lp-reveal">Preview</p>
+        <h2 className="lp-section-title lp-reveal">See it in action</h2>
+        <div className="lp-browser-frame lp-reveal">
+          <div className="lp-browser-bar">
+            <span className="lp-browser-dot" />
+            <span className="lp-browser-dot" />
+            <span className="lp-browser-dot" />
+            <span className="lp-browser-url">pharmacy-inventory-system-three.vercel.app</span>
+          </div>
+          <div className="lp-browser-content">
+            <img
+              src="/dashboard-preview.png"
+              alt="PharmTrack dashboard showing medication inventory table, stock alerts, and prediction charts"
+              className="lp-preview-img"
+              loading="lazy"
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+            />
+            <div className="lp-preview-placeholder" style={{ display: 'none' }}>
+              <p>Dashboard preview</p>
+              <button className="lp-cta" onClick={onEnterApp}>
+                View live instead <span className="lp-cta-arrow">&rarr;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p className="lp-preview-caption lp-reveal">
+          The dashboard with inventory table, stock level alerts, and prediction charts.
+        </p>
+      </section>
+
       {/* Tech Stack */}
       <section className="lp-tech" id="architecture">
         <p className="lp-section-label lp-reveal">Architecture</p>
@@ -132,6 +187,29 @@ export default function LandingPage({ onEnterApp }) {
                   <li key={item}>{item}</li>
                 ))}
               </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Use Cases */}
+      <section className="lp-usecases" id="usecases">
+        <p className="lp-section-label lp-reveal">Real-world scenarios</p>
+        <h2 className="lp-section-title lp-reveal">Problems it solves</h2>
+        <div className="lp-usecases-list">
+          {USE_CASES.map((uc, i) => (
+            <div className="lp-usecase lp-reveal" key={uc.scenario} style={{ transitionDelay: `${i * 0.08}s` }}>
+              <h3 className="lp-usecase-scenario">{uc.scenario}</h3>
+              <div className="lp-usecase-body">
+                <div className="lp-usecase-problem">
+                  <span className="lp-usecase-tag">Problem</span>
+                  <p>{uc.problem}</p>
+                </div>
+                <div className="lp-usecase-solution">
+                  <span className="lp-usecase-tag lp-usecase-tag-solution">Solution</span>
+                  <p>{uc.solution}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
