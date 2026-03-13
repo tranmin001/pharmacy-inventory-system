@@ -670,9 +670,14 @@ function App() {
               <h1>PharmTrack</h1>
               <p>Inventory Management System</p>
             </div>
-            <button className="btn btn-secondary btn-dark-toggle" onClick={() => setDarkMode(!darkMode)}>
-              {darkMode ? 'Light Mode' : 'Dark Mode'}
-            </button>
+            <div className="header-actions">
+              <button className="btn btn-secondary btn-home" onClick={() => { setShowLanding(true); window.scrollTo(0, 0); }}>
+                Home
+              </button>
+              <button className="btn btn-secondary btn-dark-toggle" onClick={() => setDarkMode(!darkMode)}>
+                {darkMode ? 'Light Mode' : 'Dark Mode'}
+              </button>
+            </div>
           </div>
         </div>
       </header>
